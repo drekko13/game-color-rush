@@ -166,7 +166,6 @@ export const CardComponent: React.FC<CardProps> = ({
 
   return (
     <motion.div
-      layout
       drag={isPlayable ? 'y' : false}
       dragConstraints={{ top: -140, bottom: 0 }}
       dragElastic={0.2}
@@ -184,16 +183,16 @@ export const CardComponent: React.FC<CardProps> = ({
       }
       whileTap={isPlayable ? { scale: 0.96 } : undefined}
       onClick={isPlayable ? onClick : undefined}
-      style={{ transform: `rotate(${rotation}deg)` }}
+      style={{ transform: `rotate(${rotation}deg)`, willChange: 'transform' }}
       className={`relative ${sizeStyles[size]} bg-gradient-to-br ${getColorGradient(
         card.color
-      )} border-2 shadow-xl flex flex-col justify-between p-2 select-none overflow-hidden transition-all duration-150 ${
+      )} border-2 shadow-lg flex flex-col justify-between p-2 select-none overflow-hidden transition-all duration-150 ${
         isPlayable
           ? 'cursor-pointer ring-2 ring-white/60 hover:ring-white hover:shadow-2xl'
           : 'opacity-75 filter grayscale-[25%] cursor-not-allowed'
       } ${className}`}
     >
-      <div className="absolute -top-12 -left-12 w-28 h-28 bg-white/20 rounded-full blur-xl pointer-events-none" />
+      <div className="absolute -top-10 -left-10 w-24 h-24 bg-gradient-to-br from-white/20 to-transparent rounded-full pointer-events-none" />
 
       {/* Top Left Corner */}
       <div className="flex items-center justify-between pointer-events-none">

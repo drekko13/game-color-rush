@@ -85,6 +85,20 @@
   transform: translate3d(0, 0, 0);
 }
 
+@media (max-width: 768px) {
+  .screen-shake-sm,
+  .screen-shake-lg {
+    animation: shakeMobile 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+
+  @keyframes shakeMobile {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    25% { transform: translate3d(-3px, 2px, 0); }
+    50% { transform: translate3d(3px, -2px, 0); }
+    75% { transform: translate3d(-1px, 1px, 0); }
+  }
+}
+
 /* 3D Card Perspective */
 .card-perspective {
   perspective: 1000px;

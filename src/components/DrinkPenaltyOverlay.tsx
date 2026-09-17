@@ -31,46 +31,16 @@ export const DrinkPenaltyOverlay: React.FC = () => {
             }`}
           />
 
-          {/* GPU Shockwave ring */}
+          {/* Center Penalty Banner (Ultra-lightweight for mobile) */}
           <motion.div
-            initial={{ scale: 0.5, opacity: 0.8 }}
-            animate={{ scale: 1.5, opacity: 0 }}
-            transition={{ duration: 0.65, ease: 'easeOut' }}
-            className={`absolute w-64 h-64 md:w-96 md:h-96 rounded-full border-4 pointer-events-none ${
-              isInferno ? 'border-rose-500 shadow-[0_0_35px_rgba(244,63,94,0.6)]' : 'border-amber-400 shadow-[0_0_35px_rgba(251,191,36,0.6)]'
-            }`}
-            style={{ willChange: 'transform, opacity' }}
-          />
-
-          {/* Party Drink Splash */}
-          {showDrink && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, y: -20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute top-16 md:top-24 flex flex-col items-center z-30"
-              style={{ willChange: 'transform, opacity' }}
-            >
-              <div className="p-3 bg-amber-500/20 border border-amber-400/40 rounded-full shadow-lg flex items-center gap-2">
-                <Beer className="w-8 h-8 text-amber-400 animate-bounce" />
-                <span className="text-amber-200 font-black text-sm tracking-wider uppercase">
-                  PENALTY SIP!
-                </span>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Center Penalty Banner */}
-          <motion.div
-            initial={{ scale: 0.7, y: 15, opacity: 0 }}
+            initial={{ scale: 0.8, y: 10, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.85, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 26 }}
-            className={`relative z-50 flex flex-col items-center px-6 py-4 rounded-3xl border-2 shadow-2xl ${
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className={`relative z-50 flex flex-col items-center px-4 md:px-6 py-3 md:py-4 rounded-2xl md:rounded-3xl border-2 shadow-xl max-w-[88vw] md:max-w-md ${
               isInferno
-                ? 'bg-slate-950/95 border-rose-500 shadow-rose-600/40'
-                : 'bg-slate-950/95 border-amber-400 shadow-amber-500/40'
+                ? 'bg-slate-950/95 border-rose-500'
+                : 'bg-slate-950/95 border-amber-400'
             }`}
             style={{ willChange: 'transform, opacity' }}
           >
