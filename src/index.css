@@ -107,3 +107,14 @@
 .card-preserve-3d {
   transform-style: preserve-3d;
 }
+
+/* GPU Accelerated Countdown Bar */
+@keyframes rushCountdownBar {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+

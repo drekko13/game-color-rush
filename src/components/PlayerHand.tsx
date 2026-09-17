@@ -1,11 +1,13 @@
 import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore } from '../store/useGameStore';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { CardComponent } from './Card';
 import { isValidPlay } from '../game/deck';
 import { Zap, PlusCircle, ArrowRightCircle } from 'lucide-react';
 
 export const PlayerHand: React.FC = () => {
+  const isMobile = useIsMobile(768);
   const {
     players,
     currentTurnIndex,
@@ -103,29 +105,56 @@ export const PlayerHand: React.FC = () => {
         )}
       </div>
 
-      {/* Desktop Card Fan Layout */}
-      <div className="hidden md:flex items-end justify-center w-full max-w-5xl h-44 px-8 relative">
-        <div className="flex items-end justify-center -space-x-8 lg:-space-x-7 pt-4">
-          {hand.map((card, index) => {
+      {/* Desktop Card Fan Layout (Only mounted on desktop) */}
+      {!isMobile ? (
+        <div className="flex items-end justify-center w-full max-w-5xl h-44 px-8 relative">
+          <div className="flex items-end justify-center -space-x-8 lg:-space-x-7 pt-4">
+            {hand.map((card, index) => {
+              const playable = isMyTurn && gamePhase === 'playing' && isValidPlay(card, topDiscard, activeColor);
+              const rotation = getFanRotation(index, hand.length);
+              const translateY = getFanTranslateY(index, hand.length);
+
+              return (
+                <motion.div
+                  key={card.id}
+                  initial={{ y: 40, opacity: 0, scale: 0.9 }}
+                  animate={{
+                    y: translateY,
+                    opacity: 1,
+                    rotate: rotation,
+                    scale: 1,
+                  }}
+                  exit={{ y: 40, opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  style={{ zIndex: index + 1, willChange: 'transform, opacity' }}
+                  className="hover:z-50 hover:-translate-y-6 transition-transform cursor-pointer"
+                >
+                  <CardComponent
+                    card={card}
+                    isPlayable={playable}
+                    onClick={() => {
+                      if (playable) {
+                        playCard(humanPlayer.id, card.id);
+                      }
+                    }}
+                    size="md"
+                  />
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* Mobile Horizontal Snap-Scroll Ribbon Layout (Only mounted on mobile) */
+        <div
+          ref={scrollContainerRef}
+          className="flex w-full overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 px-3 items-center space-x-2.5 min-h-[145px]"
+        >
+          {hand.map((card) => {
             const playable = isMyTurn && gamePhase === 'playing' && isValidPlay(card, topDiscard, activeColor);
-            const rotation = getFanRotation(index, hand.length);
-            const translateY = getFanTranslateY(index, hand.length);
 
             return (
-              <motion.div
-                key={card.id}
-                initial={{ y: 40, opacity: 0, scale: 0.9 }}
-                animate={{
-                  y: translateY,
-                  opacity: 1,
-                  rotate: rotation,
-                  scale: 1,
-                }}
-                exit={{ y: 40, opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
-                style={{ zIndex: index + 1, willChange: 'transform, opacity' }}
-                className="hover:z-50 hover:-translate-y-6 transition-transform cursor-pointer"
-              >
+              <div key={card.id} className="snap-center shrink-0">
                 <CardComponent
                   card={card}
                   isPlayable={playable}
@@ -136,36 +165,11 @@ export const PlayerHand: React.FC = () => {
                   }}
                   size="md"
                 />
-              </motion.div>
+              </div>
             );
           })}
         </div>
-      </div>
-
-      {/* Mobile Horizontal Snap-Scroll Ribbon Layout */}
-      <div
-        ref={scrollContainerRef}
-        className="flex md:hidden w-full overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 px-3 items-center space-x-2.5 min-h-[145px]"
-      >
-        {hand.map((card) => {
-          const playable = isMyTurn && gamePhase === 'playing' && isValidPlay(card, topDiscard, activeColor);
-
-          return (
-            <div key={card.id} className="snap-center shrink-0">
-              <CardComponent
-                card={card}
-                isPlayable={playable}
-                onClick={() => {
-                  if (playable) {
-                    playCard(humanPlayer.id, card.id);
-                  }
-                }}
-                size="md"
-              />
-            </div>
-          );
-        })}
-      </div>
+      )}
 
       {/* Turn Helper Prompt */}
       {isMyTurn && !hasPlayableCard && !hasPlayerDrawnThisTurn && (
