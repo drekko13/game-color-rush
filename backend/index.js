@@ -504,7 +504,7 @@ function serverInflictPenalty(room, targetPlayerId, count, type) {
       target.hasCalledRush = false;
       target.drinkPenaltyCount += 1;
       advanceRoomTurn(room, 2);
-    }, 500);
+    }, 450);
   }
 }
 

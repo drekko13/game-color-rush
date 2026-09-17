@@ -109,76 +109,68 @@ class SoundEngine {
     noise.start(ctx.currentTime);
   }
 
-  // 3. BURST +2 (Two rapid whoosh-slap sequences)
+  // 3. BURST +2 (Two rapid whoosh-slap sequences scheduled natively)
   public playBurst2() {
     if (this.isMuted) return;
-    const playWhooshSlap = (delay: number) => {
-      setTimeout(() => {
-        const ctx = this.initCtx();
-        if (!ctx) return;
+    const ctx = this.initCtx();
+    if (!ctx) return;
 
-        // Whoosh
-        const osc = ctx.createOscillator();
-        const gain = this.createGain(ctx, 0.35);
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(180, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(750, ctx.currentTime + 0.1);
-        osc.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.2);
+    const t = ctx.currentTime;
+    // Fast dual whoosh
+    for (let i = 0; i < 2; i++) {
+      const startT = t + i * 0.14;
+      const osc = ctx.createOscillator();
+      const gain = this.createGain(ctx, 0.3);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, startT);
+      osc.frequency.exponentialRampToValueAtTime(700, startT + 0.08);
+      osc.frequency.exponentialRampToValueAtTime(100, startT + 0.16);
 
-        gain.gain.setValueAtTime(0.01, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.35 * this.masterVolume, ctx.currentTime + 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.01, startT);
+      gain.gain.linearRampToValueAtTime(0.3 * this.masterVolume, startT + 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, startT + 0.16);
 
-        osc.connect(gain);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.22);
-
-        // Slap impact
-        setTimeout(() => this.playCardPlay(), 80);
-      }, delay);
-    };
-
-    playWhooshSlap(0);
-    playWhooshSlap(180);
+      osc.connect(gain);
+      osc.start(startT);
+      osc.stop(startT + 0.18);
+    }
   }
 
-  // 4. INFERNO +4 (Deep bass shockwave, crackling heat flare, 4 projectile impacts)
+  // 4. INFERNO +4 (Deep bass shockwave + rapid projectile impacts, zero setTimeout)
   public playInferno4() {
     if (this.isMuted) return;
     const ctx = this.initCtx();
     if (!ctx) return;
 
-    // Sub rumble
-    const subOsc = ctx.createOscillator();
-    const subGain = this.createGain(ctx, 0.6);
-    subOsc.type = 'triangle';
-    subOsc.frequency.setValueAtTime(110, ctx.currentTime);
-    subOsc.frequency.exponentialRampToValueAtTime(35, ctx.currentTime + 0.6);
+    const t = ctx.currentTime;
 
-    subGain.gain.setValueAtTime(0.6 * this.masterVolume, ctx.currentTime);
-    subGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.65);
+    // Sub rumble bass
+    const subOsc = ctx.createOscillator();
+    const subGain = this.createGain(ctx, 0.45);
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(110, t);
+    subOsc.frequency.exponentialRampToValueAtTime(35, t + 0.45);
+
+    subGain.gain.setValueAtTime(0.45 * this.masterVolume, t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.48);
 
     subOsc.connect(subGain);
-    subOsc.start(ctx.currentTime);
-    subOsc.stop(ctx.currentTime + 0.65);
+    subOsc.start(t);
+    subOsc.stop(t + 0.5);
 
-    // Crackle sweep
+    // 4 crisp projectile impacts scheduled on audio timeline
     for (let i = 0; i < 4; i++) {
-      setTimeout(() => {
-        this.playCardDraw();
-        const impactCtx = this.initCtx();
-        if (!impactCtx) return;
-        const osc = impactCtx.createOscillator();
-        const g = this.createGain(impactCtx, 0.3);
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(300 + i * 80, impactCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(80, impactCtx.currentTime + 0.15);
-        g.gain.setValueAtTime(0.3 * this.masterVolume, impactCtx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, impactCtx.currentTime + 0.15);
-        osc.connect(g);
-        osc.start(impactCtx.currentTime);
-        osc.stop(impactCtx.currentTime + 0.16);
-      }, 100 + i * 110);
+      const strikeT = t + 0.06 + i * 0.08;
+      const osc = ctx.createOscillator();
+      const g = this.createGain(ctx, 0.22);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(260 + i * 35, strikeT);
+      osc.frequency.exponentialRampToValueAtTime(70, strikeT + 0.08);
+      g.gain.setValueAtTime(0.22 * this.masterVolume, strikeT);
+      g.gain.exponentialRampToValueAtTime(0.001, strikeT + 0.08);
+      osc.connect(g);
+      osc.start(strikeT);
+      osc.stop(strikeT + 0.09);
     }
   }
 

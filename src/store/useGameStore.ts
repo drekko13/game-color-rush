@@ -470,14 +470,37 @@ export const useGameStore = create<GameState>((set, get) => ({
       const topDiscard = discardPile[discardPile.length - 1];
 
       if (card && isValidPlay(card, topDiscard, activeColor)) {
-        if (card.value === 'SPECTRUM' || card.value === 'INFERNO_4') {
-          set({
-            gamePhase: 'color_picker',
-            activeColorPickerPlayerId: playerId,
-          });
-        }
+        // 1. Optimistic local update so card leaves hand and lands on discard pile INSTANTLY (0ms!)
+        const updatedHand = currentPlayer.hand.filter((c) => c.id !== cardId);
+        const optimisticDiscard = {
+          ...card,
+          rotation: Math.random() * 20 - 10,
+          offsetX: Math.random() * 8 - 4,
+          offsetY: Math.random() * 8 - 4,
+        };
+
+        const nextActiveColor = card.color !== 'wild' ? card.color : activeColor;
+
+        set((state) => ({
+          discardPile: [...state.discardPile, optimisticDiscard],
+          players: state.players.map((p) =>
+            p.id === playerId ? { ...p, hand: updatedHand } : p
+          ),
+          activeColor: nextActiveColor,
+          gamePhase:
+            card.value === 'SPECTRUM' || card.value === 'INFERNO_4'
+              ? 'color_picker'
+              : state.gamePhase,
+          activeColorPickerPlayerId:
+            card.value === 'SPECTRUM' || card.value === 'INFERNO_4' ? playerId : null,
+        }));
+
         socketService.playCard(roomId, cardId);
-        soundFx.playCardPlay();
+        if (card.value === 'BURST_2') {
+          soundFx.playBurst2();
+        } else {
+          soundFx.playCardPlay();
+        }
       }
       return;
     }
@@ -1367,15 +1390,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         },
       });
 
-      // Clear missiles when they finish landing (550ms)
+      // Clear missiles when they finish landing (450ms)
       setTimeout(() => {
         set({ screenShake: 'none', cardMissiles: null });
-      }, 550);
+      }, 450);
 
-      // Clear penalty banner at 1000ms (just before backend state sync at 1100ms)
+      // Clear penalty banner promptly at 650ms
       setTimeout(() => {
         set({ penaltyState: null });
-      }, 1000);
+      }, 650);
     });
 
     socket.on('rush_success', (data: { playerId: string }) => {
