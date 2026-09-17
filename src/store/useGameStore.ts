@@ -781,6 +781,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       }, 250);
     }
 
+    // Let missiles land smoothly first before inserting cards into hand
     setTimeout(() => {
       set((state) => ({
         players: state.players.map((p) => {
@@ -801,6 +802,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         cardMissiles: null,
       }));
 
+      // Dismiss banner and advance turn
       setTimeout(() => {
         set((state) => ({
           gamePhase: 'playing',
@@ -817,8 +819,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         } else {
           get().advanceTurn(2);
         }
-      }, 550);
-    }, 500);
+      }, 450);
+    }, 650);
   },
 
   callRush: (playerId: string) => {
@@ -1365,9 +1367,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         },
       });
 
+      // Clear missiles when they finish landing (550ms)
       setTimeout(() => {
-        set({ screenShake: 'none', cardMissiles: null, penaltyState: null });
-      }, 950);
+        set({ screenShake: 'none', cardMissiles: null });
+      }, 550);
+
+      // Clear penalty banner at 1000ms (just before backend state sync at 1100ms)
+      setTimeout(() => {
+        set({ penaltyState: null });
+      }, 1000);
     });
 
     socket.on('rush_success', (data: { playerId: string }) => {

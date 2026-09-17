@@ -487,10 +487,10 @@ function serverInflictPenalty(room, targetPlayerId, count, type) {
   if (type === 'rush_penalty') {
     broadcastRoomState(room.roomId);
   } else {
-    // Berikan jeda 550ms agar animasi kartu missile & banner selesai tampil mulus di klien sebelum giliran berlanjut
+    // Berikan jeda 1100ms agar animasi kartu missile & banner di klien selesai 60fps sebelum giliran dan kartu baru disinkronkan
     setTimeout(() => {
       advanceRoomTurn(room, 2);
-    }, 550);
+    }, 1100);
   }
 }
 

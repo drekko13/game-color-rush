@@ -45,7 +45,7 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`w-full h-dvh md:h-screen bg-table-dark bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-table-dark to-black text-slate-100 flex flex-col justify-between select-none overflow-hidden relative ${shakeClass}`}
+      className="w-full h-dvh md:h-screen bg-table-dark bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-table-dark to-black text-slate-100 flex flex-col justify-between select-none overflow-hidden relative"
     >
       {/* Ambient background felt radial lights */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] md:w-[800px] h-[350px] md:h-[500px] bg-sky-900/15 rounded-full blur-3xl pointer-events-none" />
@@ -54,7 +54,8 @@ export const App: React.FC = () => {
       <HeaderBar />
 
       {/* Main Game Arena Container */}
-      <main className="w-full max-w-7xl mx-auto flex-1 flex flex-col justify-between px-2 md:px-6 py-1 md:py-3 relative z-10 overflow-hidden">
+      <main className={`w-full max-w-7xl mx-auto flex-1 flex flex-col justify-between px-2 md:px-6 py-1 md:py-3 relative z-10 overflow-hidden ${shakeClass}`}>
+
         {/* =========================================================================
             MOBILE LAYOUT (< md): Sleek 3-Opponent Header Strip + 100% Center Arena
             ========================================================================= */}
