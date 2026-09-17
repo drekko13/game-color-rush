@@ -47,18 +47,18 @@ export const DrinkPenaltyOverlay: React.FC = () => {
             <div
               className={`p-3 rounded-2xl border mb-2 flex items-center justify-center ${
                 isInferno
-                  ? 'bg-rose-500/20 border-rose-400/50'
-                  : 'bg-amber-500/20 border-amber-400/50'
+                  ? 'bg-rose-500/20 border-rose-400/50 shadow-[0_0_15px_rgba(244,63,94,0.3)]'
+                  : 'bg-amber-500/20 border-amber-400/50 shadow-[0_0_15px_rgba(251,191,36,0.3)]'
               }`}
             >
               {penaltyState.type === 'inferno_4' ? (
-                <Flame className="w-10 h-10 text-rose-500 animate-pulse" />
+                <Flame className="w-10 h-10 text-rose-500 drop-shadow" />
               ) : penaltyState.type === 'rush_penalty' ? (
-                <Zap className="w-10 h-10 text-amber-400 animate-bounce" />
+                <Zap className="w-10 h-10 text-amber-400 drop-shadow" />
               ) : showDrink ? (
-                <Beer className="w-10 h-10 text-amber-400 animate-bounce" />
+                <Beer className="w-10 h-10 text-amber-400 drop-shadow" />
               ) : (
-                <Sparkles className="w-10 h-10 text-cyan-400 animate-pulse" />
+                <Sparkles className="w-10 h-10 text-cyan-400 drop-shadow" />
               )}
             </div>
 

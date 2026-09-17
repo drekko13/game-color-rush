@@ -44,7 +44,10 @@ export const MissileCards: React.FC = () => {
   return (
     <AnimatePresence>
       {cardMissiles && (
-        <div className="fixed inset-0 pointer-events-none z-40 flex items-center justify-center">
+        <div
+          className="fixed inset-0 pointer-events-none z-40 flex items-center justify-center"
+          style={{ isolation: 'isolate', contain: 'layout style paint' }}
+        >
           {Array.from({ length: count }).map((_, i) => {
             const arcOffset = (i % 2 === 0 ? -20 : 20);
             return (

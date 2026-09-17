@@ -4,12 +4,39 @@ import { Server } from 'socket.io';
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS: whitelist only known origins; VITE_FRONTEND_URL env var for custom domains
+const ALLOWED_ORIGINS = [
+  'https://game-color-rush.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:5173',
+];
+if (process.env.VITE_FRONTEND_URL) ALLOWED_ORIGINS.push(process.env.VITE_FRONTEND_URL);
+
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: (origin, cb) => {
+      // Allow requests with no origin (e.g. server-to-server, curl, mobile apps in WebView)
+      if (!origin || ALLOWED_ORIGINS.some((o) => origin.startsWith(o))) {
+        cb(null, true);
+      } else {
+        cb(new Error(`CORS blocked: ${origin}`));
+      }
+    },
     methods: ['GET', 'POST'],
   },
 });
+
+// Per-socket rate limiting: track last play_card timestamp
+const socketLastPlay = new Map(); // socketId -> timestamp
+const PLAY_RATE_LIMIT_MS = 200; // minimum 200ms between play_card events
+const VALID_COLORS = new Set(['crimson', 'ocean', 'toxic', 'solar']);
+
+// Input validators
+function isValidString(v, maxLen = 64) {
+  return typeof v === 'string' && v.length > 0 && v.length <= maxLen;
+}
 
 // Load .env secara otomatis jika file .env ada (didukung langsung di Node.js 20+)
 try {
@@ -466,48 +493,36 @@ function serverInflictPenalty(room, targetPlayerId, count, type) {
   const target = room.players.find((p) => p.id === targetPlayerId);
   if (!target) return;
 
-  // 1. Broadcast langsung meja agar User B melihat kartu +2/+4 di tumpukan seketika (0ms delay)
-  broadcastRoomState(room.roomId);
-
-  // 2. Kirim event animasi rudal kartu seketika
+  // CRITICAL FIX: Send penalty_event FIRST so animation starts immediately on all clients.
+  // Do NOT broadcast game_state_sync before this — that would cause a re-render collision
+  // on mobile (JS thread blocked by heavy state update, killing the missile animation).
   io.to(room.roomId).emit('penalty_event', {
     targetPlayerId,
     cardsCount: count,
     type,
   });
 
-  if (type === 'rush_penalty') {
-    setTimeout(() => {
-      for (let i = 0; i < count; i++) {
-        if (room.deck.length === 0 && room.discardPile.length > 1) {
-          const top = room.discardPile.pop();
-          room.deck = shuffleDeck(room.discardPile);
-          room.discardPile = [top];
-        }
-        const c = room.deck.pop();
-        if (c) target.hand.push(c);
+  // After 450ms (missile landing time), add cards to hand then broadcast final state.
+  // Both rush_penalty and regular penalties now use the same safe 450ms window.
+  setTimeout(() => {
+    for (let i = 0; i < count; i++) {
+      if (room.deck.length === 0 && room.discardPile.length > 1) {
+        const top = room.discardPile.pop();
+        room.deck = shuffleDeck(room.discardPile);
+        room.discardPile = [top];
       }
-      target.hasCalledRush = false;
-      target.drinkPenaltyCount += 1;
+      const c = room.deck.pop();
+      if (c) target.hand.push(c);
+    }
+    target.hasCalledRush = false;
+    target.drinkPenaltyCount += 1;
+
+    if (type === 'rush_penalty') {
       broadcastRoomState(room.roomId);
-    }, 450);
-  } else {
-    // 3. Tepat saat rudal mendarat di tangan pemain (450ms), masukkan kartu ke tangan dan alihkan giliran
-    setTimeout(() => {
-      for (let i = 0; i < count; i++) {
-        if (room.deck.length === 0 && room.discardPile.length > 1) {
-          const top = room.discardPile.pop();
-          room.deck = shuffleDeck(room.discardPile);
-          room.discardPile = [top];
-        }
-        const c = room.deck.pop();
-        if (c) target.hand.push(c);
-      }
-      target.hasCalledRush = false;
-      target.drinkPenaltyCount += 1;
-      advanceRoomTurn(room, 2);
-    }, 450);
-  }
+    } else {
+      advanceRoomTurn(room, 2); // advanceRoomTurn calls broadcastRoomState internally
+    }
+  }, 450);
 }
 
 function serverCatchRush(room, targetPlayerId) {
@@ -827,25 +842,38 @@ io.on('connection', (socket) => {
 
   // In-Game Events
   socket.on('play_card', ({ roomId, cardId }) => {
-    const room = rooms.get(roomId);
+    // Input validation
+    if (!isValidString(roomId) || !isValidString(cardId)) return;
+    // Rate limiting: prevent card spam (cheating / network retry floods)
+    const now = Date.now();
+    const lastPlay = socketLastPlay.get(socket.id) || 0;
+    if (now - lastPlay < PLAY_RATE_LIMIT_MS) return;
+    socketLastPlay.set(socket.id, now);
+
+    const room = rooms.get(roomId.toUpperCase());
     if (room && room.status === 'playing') {
-      const p = room.players.find((pl) => pl.socketId === socket.id || pl.id === socket.id);
-      if (p) serverPlayCard(room, p.id, cardId);
+      const p = room.players.find((pl) => pl.socketId === socket.id);
+      // Security: verify the card belongs to this player's hand before playing
+      if (p && p.hand.some((c) => c.id === cardId)) {
+        serverPlayCard(room, p.id, cardId);
+      }
     }
   });
 
   socket.on('draw_card', ({ roomId }) => {
-    const room = rooms.get(roomId);
+    if (!isValidString(roomId)) return;
+    const room = rooms.get(roomId.toUpperCase());
     if (room && room.status === 'playing') {
-      const p = room.players.find((pl) => pl.socketId === socket.id || pl.id === socket.id);
+      const p = room.players.find((pl) => pl.socketId === socket.id);
       if (p) serverDrawCard(room, p.id);
     }
   });
 
   socket.on('pass_turn', ({ roomId }) => {
-    const room = rooms.get(roomId);
+    if (!isValidString(roomId)) return;
+    const room = rooms.get(roomId.toUpperCase());
     if (room && room.status === 'playing') {
-      const p = room.players.find((pl) => pl.socketId === socket.id || pl.id === socket.id);
+      const p = room.players.find((pl) => pl.socketId === socket.id);
       if (p && room.players[room.currentTurnIndex]?.id === p.id) {
         advanceRoomTurn(room, 1);
       }
@@ -853,8 +881,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('select_wild_color', ({ roomId, color }) => {
-    const room = rooms.get(roomId);
+    // Security: reject invalid color strings
+    if (!isValidString(roomId) || !VALID_COLORS.has(color)) return;
+    const room = rooms.get(roomId.toUpperCase());
     if (room && room.status === 'playing') {
+      // Security: only the current player (who played the wild) can pick color
+      const p = room.players.find((pl) => pl.socketId === socket.id);
+      if (!p || room.players[room.currentTurnIndex]?.id !== p.id) return;
+      if (room.gamePhase !== 'color_picker') return;
+
       room.activeColor = color;
       room.gamePhase = 'playing';
       const top = room.discardPile[room.discardPile.length - 1];
@@ -869,9 +904,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('call_rush', ({ roomId }) => {
-    const room = rooms.get(roomId);
+    if (!isValidString(roomId)) return;
+    const room = rooms.get(roomId.toUpperCase());
     if (room && room.status === 'playing') {
-      const p = room.players.find((pl) => pl.socketId === socket.id || pl.id === socket.id);
+      const p = room.players.find((pl) => pl.socketId === socket.id);
       if (p && room.rushDuel && room.rushDuel.targetPlayerId === p.id) {
         if (room.rushTimeout) clearTimeout(room.rushTimeout);
         room.rushDuel = null;
@@ -883,8 +919,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('catch_rush', ({ roomId, targetPlayerId }) => {
-    const room = rooms.get(roomId);
-    if (room && room.status === 'playing' && room.rushDuel && room.rushDuel.targetPlayerId === targetPlayerId) {
+    if (!isValidString(roomId) || !isValidString(targetPlayerId)) return;
+    // Security: cannot catch yourself
+    const room = rooms.get(roomId.toUpperCase());
+    if (!room || room.status !== 'playing') return;
+    const catcher = room.players.find((pl) => pl.socketId === socket.id);
+    if (!catcher || catcher.id === targetPlayerId) return; // cannot catch yourself
+    if (room.rushDuel && room.rushDuel.targetPlayerId === targetPlayerId) {
       serverCatchRush(room, targetPlayerId);
     }
   });

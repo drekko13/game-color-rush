@@ -1346,6 +1346,36 @@ export const useGameStore = create<GameState>((set, get) => ({
           clearActiveMatch();
         }
 
+        // Performance guard for mobile: If missile/penalty animation is currently running,
+        // do not immediately replace all players' hands (which triggers massive DOM re-renders
+        // and drops animation frames on mobile GPU). Instead, sync table metadata immediately
+        // and defer player hand sync until the 450ms missile animation completes.
+        const isAnimationRunning = get().penaltyState !== null || get().cardMissiles !== null;
+        if (isAnimationRunning) {
+          set({
+            currentScreen: 'game',
+            gameMode: 'multiplayer',
+            roomId: syncData.roomId,
+            discardPile: syncData.discardPile,
+            activeColor: syncData.activeColor,
+            turnDirection: syncData.turnDirection,
+            myPlayerId: syncData.myPlayerId,
+            isSearchingMatch: false,
+          });
+
+          setTimeout(() => {
+            set({
+              players: syncData.players,
+              gamePhase: syncData.gamePhase,
+              currentTurnIndex: syncData.currentTurnIndex,
+              winner: syncData.winner,
+              rushDuel: syncData.rushDuel,
+              logs: syncData.logs,
+            });
+          }, 460);
+          return;
+        }
+
         set({
           currentScreen: 'game',
           gameMode: 'multiplayer',
@@ -1369,10 +1399,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       const { players, partyDrinkPenaltyEnabled } = get();
       const target = players.find((p) => p.id === data.targetPlayerId);
 
-      if (data.type === 'burst_2') soundFx.playBurst2();
-      if (data.type === 'inferno_4') soundFx.playInferno4();
-      if (data.type === 'rush_penalty') soundFx.playDrinkPenalty();
-
+      // 1. SET STATE FIRST so animations mount immediately on this exact frame without sound blocking
       set({
         screenShake: data.type === 'inferno_4' ? 'lg' : 'sm',
         cardMissiles: {
@@ -1388,6 +1415,17 @@ export const useGameStore = create<GameState>((set, get) => ({
           cardsCount: data.cardsCount,
           showDrinkSplash: partyDrinkPenaltyEnabled,
         },
+      });
+
+      // 2. Play audio in requestAnimationFrame/non-blocking try-catch so audio issues on mobile never stalls UI
+      requestAnimationFrame(() => {
+        try {
+          if (data.type === 'burst_2') soundFx.playBurst2();
+          if (data.type === 'inferno_4') soundFx.playInferno4();
+          if (data.type === 'rush_penalty') soundFx.playDrinkPenalty();
+        } catch {
+          // Safe catch for mobile AudioContext autoplay policies
+        }
       });
 
       // Clear missiles when they finish landing (450ms)
