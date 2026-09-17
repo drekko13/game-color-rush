@@ -6,9 +6,25 @@ import { SUIT_NAMES, COLOR_HEX } from '../types/game';
 import { Flame, Waves, Sparkles, Sun } from 'lucide-react';
 
 export const ColorWheelModal: React.FC = () => {
-  const { gamePhase, selectWildColor } = useGameStore();
+  const {
+    gamePhase,
+    selectWildColor,
+    gameMode,
+    myPlayerId,
+    players,
+    currentTurnIndex,
+    activeColorPickerPlayerId,
+  } = useGameStore();
 
   if (gamePhase !== 'color_picker') return null;
+
+  // In multiplayer: only show modal to the player who played the wild card!
+  if (gameMode === 'multiplayer') {
+    const pickerId = activeColorPickerPlayerId || players[currentTurnIndex]?.id;
+    if (pickerId && myPlayerId && pickerId !== myPlayerId) {
+      return null;
+    }
+  }
 
   const colors: {
     color: CardColor;

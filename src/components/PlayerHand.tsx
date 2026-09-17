@@ -114,16 +114,16 @@ export const PlayerHand: React.FC = () => {
             return (
               <motion.div
                 key={card.id}
-                layout
-                initial={{ y: 50, opacity: 0 }}
+                initial={{ y: 40, opacity: 0, scale: 0.9 }}
                 animate={{
                   y: translateY,
                   opacity: 1,
                   rotate: rotation,
+                  scale: 1,
                 }}
-                exit={{ y: 50, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-                style={{ zIndex: index + 1 }}
+                exit={{ y: 40, opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                style={{ zIndex: index + 1, willChange: 'transform, opacity' }}
                 className="hover:z-50 hover:-translate-y-6 transition-transform cursor-pointer"
               >
                 <CardComponent

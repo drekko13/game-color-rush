@@ -466,18 +466,10 @@ function serverInflictPenalty(room, targetPlayerId, count, type) {
   const target = room.players.find((p) => p.id === targetPlayerId);
   if (!target) return;
 
-  for (let i = 0; i < count; i++) {
-    if (room.deck.length === 0 && room.discardPile.length > 1) {
-      const top = room.discardPile.pop();
-      room.deck = shuffleDeck(room.discardPile);
-      room.discardPile = [top];
-    }
-    const c = room.deck.pop();
-    if (c) target.hand.push(c);
-  }
-  target.hasCalledRush = false;
-  target.drinkPenaltyCount += 1;
+  // 1. Broadcast langsung meja agar User B melihat kartu +2/+4 di tumpukan seketika (0ms delay)
+  broadcastRoomState(room.roomId);
 
+  // 2. Kirim event animasi rudal kartu seketika
   io.to(room.roomId).emit('penalty_event', {
     targetPlayerId,
     cardsCount: count,
@@ -485,12 +477,34 @@ function serverInflictPenalty(room, targetPlayerId, count, type) {
   });
 
   if (type === 'rush_penalty') {
+    for (let i = 0; i < count; i++) {
+      if (room.deck.length === 0 && room.discardPile.length > 1) {
+        const top = room.discardPile.pop();
+        room.deck = shuffleDeck(room.discardPile);
+        room.discardPile = [top];
+      }
+      const c = room.deck.pop();
+      if (c) target.hand.push(c);
+    }
+    target.hasCalledRush = false;
+    target.drinkPenaltyCount += 1;
     broadcastRoomState(room.roomId);
   } else {
-    // Berikan jeda 1100ms agar animasi kartu missile & banner di klien selesai 60fps sebelum giliran dan kartu baru disinkronkan
+    // 3. Tepat saat rudal mendarat di tangan pemain (500ms), masukkan kartu ke tangan dan alihkan giliran
     setTimeout(() => {
+      for (let i = 0; i < count; i++) {
+        if (room.deck.length === 0 && room.discardPile.length > 1) {
+          const top = room.discardPile.pop();
+          room.deck = shuffleDeck(room.discardPile);
+          room.discardPile = [top];
+        }
+        const c = room.deck.pop();
+        if (c) target.hand.push(c);
+      }
+      target.hasCalledRush = false;
+      target.drinkPenaltyCount += 1;
       advanceRoomTurn(room, 2);
-    }, 1100);
+    }, 500);
   }
 }
 
