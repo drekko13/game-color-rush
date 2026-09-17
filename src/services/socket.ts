@@ -8,16 +8,17 @@ class SocketService {
   public init(): Socket {
     if (this.socket) return this.socket;
 
-    // Dev  → http://localhost:3001  (automatic)
-    // Prod → set VITE_SERVER_URL in Vercel env vars to your Railway URL
-    //        e.g. https://game-color-rush-production.up.railway.app
+    // Dev  → http://localhost:9001 (automatic)
+    // Prod → set VITE_SERVER_URL or defaults to current server IP/domain on port 9001
     const isDev = typeof window !== 'undefined' && (
       window.location.hostname === 'localhost' ||
       window.location.hostname === '127.0.0.1'
     );
-    const serverUrl = isDev
-      ? 'http://localhost:3001'
-      : (import.meta.env.VITE_SERVER_URL as string) || 'http://localhost:3001';
+    const defaultServerUrl = typeof window !== 'undefined' && window.location.hostname && !isDev
+      ? `${window.location.protocol}//${window.location.hostname}:9001`
+      : 'http://localhost:9001';
+
+    const serverUrl = (import.meta.env.VITE_SERVER_URL as string) || defaultServerUrl;
 
     this.socket = io(serverUrl, {
       autoConnect: true,

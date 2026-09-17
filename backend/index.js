@@ -11,9 +11,18 @@ const io = new Server(server, {
   },
 });
 
-const PORT = process.env.PORT || 3001;
+// Load .env secara otomatis jika file .env ada (didukung langsung di Node.js 20+)
+try {
+  if (typeof process.loadEnvFile === 'function') {
+    process.loadEnvFile();
+  }
+} catch {
+  // .env opsional jika env var sudah diset via environment / PM2
+}
 
-// Health check endpoint (buka http://IP:3001 untuk verifikasi server berjalan)
+const PORT = process.env.PORT || 9001;
+
+// Health check endpoint (buka http://IP:9001 untuk verifikasi server berjalan)
 app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
