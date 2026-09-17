@@ -31,8 +31,6 @@ export const MissileCards: React.FC = () => {
     <AnimatePresence>
       <div className="fixed inset-0 pointer-events-none z-40 flex items-center justify-center">
         {Array.from({ length: count }).map((_, i) => {
-          const delay = i * 0.12;
-
           return (
             <motion.div
               key={`${cardMissiles.id}-${i}`}
@@ -51,11 +49,12 @@ export const MissileCards: React.FC = () => {
                 opacity: [0, 1, 1, 0],
               }}
               transition={{
-                duration: 0.75,
-                delay,
-                ease: [0.25, 1, 0.5, 1],
+                duration: 0.45,
+                delay: i * 0.08,
+                ease: [0.16, 1, 0.3, 1],
               }}
-              className="absolute w-20 h-28 md:w-24 md:h-32 rounded-xl bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 border-2 border-fuchsia-400 shadow-[0_0_20px_rgba(236,72,153,0.8)] flex items-center justify-center p-2"
+              style={{ willChange: 'transform, opacity' }}
+              className="absolute w-20 h-28 md:w-24 md:h-32 rounded-xl bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 border-2 border-fuchsia-400 shadow-xl flex items-center justify-center p-2"
             >
               <div className="w-full h-full rounded-lg border border-pink-300/40 flex flex-col items-center justify-center">
                 <span className="text-xl font-black text-pink-200 drop-shadow">CR</span>

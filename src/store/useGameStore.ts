@@ -817,8 +817,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         } else {
           get().advanceTurn(2);
         }
-      }, 900);
-    }, 850);
+      }, 550);
+    }, 500);
   },
 
   callRush: (playerId: string) => {
@@ -1367,7 +1367,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       setTimeout(() => {
         set({ screenShake: 'none', cardMissiles: null, penaltyState: null });
-      }, 1200);
+      }, 950);
     });
 
     socket.on('rush_success', (data: { playerId: string }) => {
