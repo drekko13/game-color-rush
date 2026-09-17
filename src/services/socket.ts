@@ -8,10 +8,13 @@ class SocketService {
   public init(): Socket {
     if (this.socket) return this.socket;
 
+    // In dev: http://localhost:3001
+    // In production: set VITE_SERVER_URL in Vercel dashboard to your Railway server URL
     const serverUrl =
-      typeof window !== 'undefined'
-        ? `http://${window.location.hostname}:3001`
-        : 'http://localhost:3001';
+      import.meta.env.VITE_SERVER_URL ||
+      (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+        ? '' // will fail gracefully if not set
+        : 'http://localhost:3001');
 
     this.socket = io(serverUrl, {
       autoConnect: true,
