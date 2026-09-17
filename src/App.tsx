@@ -95,11 +95,6 @@ export const App: React.FC = () => {
         <PlayerHand />
       </main>
 
-      {/* When in lobby state, show MultiplayerModal directly on top */}
-      {currentScreen === 'lobby' && (
-        <MultiplayerModal isOpen={true} onClose={() => {}} />
-      )}
-
       {/* Animated Modal & Penalty Overlays */}
       <ColorWheelModal />
       <DrinkPenaltyOverlay />

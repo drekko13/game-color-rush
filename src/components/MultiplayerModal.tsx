@@ -9,7 +9,6 @@ import {
   LogIn,
   Bot,
   X,
-  Sparkles,
   Loader2,
   Copy,
   Check,
@@ -412,7 +411,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                       </p>
                     </div>
                     <button
-                      onClick={createCustomRoom}
+                      onClick={() => createCustomRoom()}
                       className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs uppercase tracking-wider shadow"
                     >
                       Buat Room (Host)
