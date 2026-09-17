@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    background-color: #0a0d14;
+    color: #f8fafc;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+}
+
+/* Custom Utilities for ColorRush */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Glassmorphism & Neon Glows */
+.glass-panel {
+  background: rgba(17, 24, 39, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glow-crimson {
+  box-shadow: 0 0 25px rgba(225, 29, 72, 0.45), 0 0 50px rgba(225, 29, 72, 0.2);
+}
+
+.glow-ocean {
+  box-shadow: 0 0 25px rgba(2, 132, 199, 0.45), 0 0 50px rgba(2, 132, 199, 0.2);
+}
+
+.glow-toxic {
+  box-shadow: 0 0 25px rgba(5, 150, 105, 0.45), 0 0 50px rgba(5, 150, 105, 0.2);
+}
+
+.glow-solar {
+  box-shadow: 0 0 25px rgba(217, 119, 6, 0.45), 0 0 50px rgba(217, 119, 6, 0.2);
+}
+
+.glow-wild {
+  box-shadow: 0 0 35px rgba(168, 85, 247, 0.5), 0 0 60px rgba(236, 72, 153, 0.3);
+}
+
+/* Screen Shake Keyframes */
+@keyframes shakeSm {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-4px, 4px); }
+  40% { transform: translate(4px, -3px); }
+  60% { transform: translate(-3px, 2px); }
+  80% { transform: translate(3px, -2px); }
+}
+
+@keyframes shakeLg {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(-8px, 6px) rotate(-1deg); }
+  30% { transform: translate(8px, -6px) rotate(1deg); }
+  45% { transform: translate(-6px, 5px) rotate(-0.5deg); }
+  60% { transform: translate(6px, -4px) rotate(0.5deg); }
+  75% { transform: translate(-4px, 3px) rotate(0deg); }
+  90% { transform: translate(2px, -2px) rotate(0deg); }
+}
+
+.screen-shake-sm {
+  animation: shakeSm 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.screen-shake-lg {
+  animation: shakeLg 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* 3D Card Perspective */
+.card-perspective {
+  perspective: 1000px;
+}
+
+.card-preserve-3d {
+  transform-style: preserve-3d;
+}
