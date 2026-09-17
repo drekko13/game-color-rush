@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n \"VITE,NODE_SERVER\" -c \"cyan,green\" \"vite\" \"node --watch server/index.js\"",
+    "dev": "concurrently -n \"VITE,NODE_SERVER\" -c \"cyan,green\" \"vite\" \"node --watch backend/index.js\"",
     "client": "vite",
-    "server": "node --watch server/index.js",
+    "server": "node --watch backend/index.js",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

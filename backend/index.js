@@ -13,6 +13,18 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3001;
 
+// Health check endpoint (buka http://IP:3001 untuk verifikasi server berjalan)
+app.use(express.json());
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    name: 'ColorRush Realtime Server',
+    version: '1.0.0',
+    connections: io.engine.clientsCount || 0,
+    uptime: Math.floor(process.uptime()) + 's',
+  });
+});
+
 // --- CARD ENGINE DATA & HELPERS ---
 const COLORS = ['crimson', 'ocean', 'toxic', 'solar'];
 
@@ -1034,4 +1046,5 @@ function launchMatchFromQueue() {
 
 server.listen(PORT, () => {
   console.log(`[ColorRush Server] Node.js & Socket.io server running on http://localhost:${PORT}`);
+  console.log(`[ColorRush Server] Health check: http://localhost:${PORT}/`);
 });
