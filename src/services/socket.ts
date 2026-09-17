@@ -8,18 +8,22 @@ class SocketService {
   public init(): Socket {
     if (this.socket) return this.socket;
 
-    // In dev: http://localhost:3001
-    // In production: set VITE_SERVER_URL in Vercel dashboard to your Railway server URL
-    const serverUrl =
-      import.meta.env.VITE_SERVER_URL ||
-      (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-        ? '' // will fail gracefully if not set
-        : 'http://localhost:3001');
+    // Dev  → http://localhost:3001  (automatic)
+    // Prod → set VITE_SERVER_URL in Vercel env vars to your Railway URL
+    //        e.g. https://game-color-rush-production.up.railway.app
+    const isDev = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+    );
+    const serverUrl = isDev
+      ? 'http://localhost:3001'
+      : (import.meta.env.VITE_SERVER_URL as string) || 'http://localhost:3001';
 
     this.socket = io(serverUrl, {
       autoConnect: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1500,
+      transports: ['websocket', 'polling'],
     });
 
     this.socket.on('connect', () => {
