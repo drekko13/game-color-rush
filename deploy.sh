@@ -4,7 +4,8 @@ echo "=== MEMULAI PROSES DEPLOYMENT OTOMATIS ==="
 # PATH Folder Project ColorRush
 WEB_PATH="/www/wwwroot/GAMES/Color-Rush"
 
-# 1. Masuk ke folder project
+# 1. Pastikan folder project ada dan masuk ke dalamnya
+mkdir -p $WEB_PATH
 cd $WEB_PATH || exit
 
 # 2. Set variabel HOME sementara agar Git & PM2 tidak fatal error
