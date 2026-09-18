@@ -7,13 +7,28 @@
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    background-color: #0a0d14;
+    color: #f8fafc;
+    touch-action: manipulation;
   }
 
   body {
-    background-color: #0a0d14;
-    color: #f8fafc;
     overflow: hidden;
-    touch-action: manipulation;
+  }
+
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    min-height: 100%;
   }
 }
 

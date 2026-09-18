@@ -35,6 +35,12 @@ interface GameState {
   gamePhase: GamePhase;
   winner: Player | null;
 
+  // Stacking rule (ColorRush)
+  stackCount: number;
+
+  // Rematch ready state
+  rematchReadyPlayers: string[];
+
   // Official Uno Scoring (500 pts target)
   targetScore: number;
   matchWinner: Player | null;
@@ -102,7 +108,7 @@ interface GameState {
     sourcePlayerId: string,
     targetPlayerId: string,
     count: number,
-    type: 'burst_2' | 'inferno_4' | 'rush_penalty' | 'challenge_penalty' | 'challenge_failed'
+    type: 'burst_2' | 'inferno_4' | 'rush_penalty' | 'challenge_penalty' | 'challenge_failed' | 'stack_penalty'
   ) => void;
   triggerBotTurn: (botIndex: number) => void;
 
@@ -115,6 +121,7 @@ interface GameState {
   joinCustomRoom: (code: string) => void;
   startRoomGame: () => void;
   leaveRoom: () => void;
+  toggleRematchReady: () => void;
   initMultiplayerSocket: () => void;
 }
 
@@ -268,6 +275,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   targetScore: 500,
   matchWinner: null,
   roundScores: {},
+
+  // Stacking rule state
+  stackCount: 0,
+  rematchReadyPlayers: [],
 
   currentScreen: activeMatchOnStartup ? 'game' : 'menu',
   publicRooms: [],
@@ -457,6 +468,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       rushCallGracePlayerId: null,
       rushDuel: null,
       challengeState: null,
+      stackCount: 0,
+      rematchReadyPlayers: [],
       logs: initialLogs,
     });
 
@@ -478,10 +491,18 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
-    const { players, currentTurnIndex, deck, discardPile, gamePhase, hasPlayerDrawnThisTurn } = get();
+    const { players, currentTurnIndex, deck, discardPile, gamePhase, hasPlayerDrawnThisTurn, stackCount } = get();
     if (gamePhase !== 'playing') return;
     const currentPlayer = players[currentTurnIndex];
     if (!currentPlayer || currentPlayer.id !== playerId) return;
+
+    // 1. If stack penalty is active, player must draw the entire accumulated stack!
+    if (stackCount > 0) {
+      set({ stackCount: 0 });
+      get().inflictDrawPenalty('stack', playerId, stackCount, 'stack_penalty');
+      return;
+    }
+
     if (hasPlayerDrawnThisTurn) return;
 
     soundFx.playCardDraw();
@@ -491,9 +512,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     if (currentDeck.length === 0) {
       if (currentDiscard.length <= 1) {
-        if (currentPlayer.isBot) {
-          get().passTurn(currentPlayer.id);
-        }
+        get().advanceTurn(1);
         return;
       }
       const topCard = currentDiscard.pop()!;
@@ -511,9 +530,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const drawnCard = currentDeck.pop();
     if (!drawnCard) {
-      if (currentPlayer.isBot) {
-        get().passTurn(currentPlayer.id);
-      }
+      get().advanceTurn(1);
       return;
     }
 
@@ -528,41 +545,58 @@ export const useGameStore = create<GameState>((set, get) => ({
       return p;
     });
 
-    set((state) => ({
-      deck: currentDeck,
-      discardPile: currentDiscard,
-      players: updatedPlayers,
-      hasPlayerDrawnThisTurn: true,
-      drawnCardId: drawnCard.id,
-      logs: [
-        {
-          id: `log-${Date.now()}`,
-          text: `${currentPlayer.name} drew a card.`,
-          timestamp: Date.now(),
-        },
-        ...state.logs.slice(0, 19),
-      ],
-    }));
+    // 2. Official Rule (ColorRush) - Force Play:
+    // "If you draw a playable card, it will be played automatically."
+    const topCardNow = currentDiscard[currentDiscard.length - 1];
+    const isPlayable = isValidPlay(drawnCard, topCardNow, get().activeColor, 0);
 
-    if (currentPlayer.isBot) {
-      const executeBotPostDraw = () => {
+    if (isPlayable) {
+      set((state) => ({
+        deck: currentDeck,
+        discardPile: currentDiscard,
+        players: updatedPlayers,
+        hasPlayerDrawnThisTurn: true,
+        drawnCardId: drawnCard.id,
+        logs: [
+          {
+            id: `log-${Date.now()}`,
+            text: `${currentPlayer.name} menarik kartu cocok (${drawnCard.label}) dan langsung memainkannya (Force Play)!`,
+            color: drawnCard.color,
+            timestamp: Date.now(),
+          },
+          ...state.logs.slice(0, 19),
+        ],
+      }));
+
+      setTimeout(() => {
         const stateNow = get();
-        if (stateNow.currentTurnIndex !== currentTurnIndex) return;
-
-        if (stateNow.gamePhase !== 'playing') {
-          setTimeout(executeBotPostDraw, 200);
-          return;
-        }
-
-        const top = stateNow.discardPile[stateNow.discardPile.length - 1];
-        if (isValidPlay(drawnCard, top, stateNow.activeColor)) {
+        if (stateNow.currentTurnIndex === currentTurnIndex && stateNow.gamePhase === 'playing') {
           get().playCard(currentPlayer.id, drawnCard.id);
-        } else {
-          get().passTurn(currentPlayer.id);
         }
-      };
+      }, 350);
+    } else {
+      set((state) => ({
+        deck: currentDeck,
+        discardPile: currentDiscard,
+        players: updatedPlayers,
+        hasPlayerDrawnThisTurn: true,
+        drawnCardId: drawnCard.id,
+        logs: [
+          {
+            id: `log-${Date.now()}`,
+            text: `${currentPlayer.name} menarik kartu (tidak cocok, giliran selesai).`,
+            timestamp: Date.now(),
+          },
+          ...state.logs.slice(0, 19),
+        ],
+      }));
 
-      setTimeout(executeBotPostDraw, get().botSpeedMs * 0.7);
+      setTimeout(() => {
+        const stateNow = get();
+        if (stateNow.currentTurnIndex === currentTurnIndex && stateNow.gamePhase === 'playing') {
+          get().advanceTurn(1);
+        }
+      }, 450);
     }
   },
 
@@ -648,7 +682,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const cardToPlay = currentPlayer.hand[cardIndex];
 
     const topDiscard = discardPile[discardPile.length - 1];
-    if (!isValidPlay(cardToPlay, topDiscard, activeColor)) {
+    if (!isValidPlay(cardToPlay, topDiscard, activeColor, get().stackCount || 0)) {
       if (currentPlayer.isBot) {
         get().drawCard(currentPlayer.id);
       }
@@ -897,9 +931,20 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     if (cardToPlay.value === 'BURST_2') {
       soundFx.playBurst2();
-      const targetIdx = get().getNextPlayerIndex(1);
-      const targetPlayer = players[targetIdx];
-      get().inflictDrawPenalty(currentPlayer.id, targetPlayer.id, 2, 'burst_2');
+      const newStack = (get().stackCount || 0) + 2;
+      set((state) => ({
+        stackCount: newStack,
+        logs: [
+          {
+            id: `log-${Date.now()}`,
+            text: `${currentPlayer.name} menumpuk BURST +2! (Total Stack: +${newStack} Kartu)`,
+            color: cardToPlay.color,
+            timestamp: Date.now(),
+          },
+          ...state.logs,
+        ],
+      }));
+      get().advanceTurn(1);
       return;
     }
 
@@ -937,6 +982,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     }));
 
     if (topCard && topCard.value === 'INFERNO_4') {
+      const newStack = (get().stackCount || 0) + 4;
+      set({ stackCount: newStack });
+
       const targetIdx = get().getNextPlayerIndex(1);
       const targetPlayer = players[targetIdx];
       const bluffData = wildDraw4BluffData || {
@@ -966,7 +1014,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           logs: [
             {
               id: `log-${Date.now()}-challenge`,
-              text: `${currentPlayer.name} memainkan INFERNO +4! ${targetPlayer.name} dapat Menerima (+4) atau Menantang (Challenge)!`,
+              text: `${currentPlayer.name} memainkan INFERNO +4! ${targetPlayer.name} dapat Menerima (+${newStack}) atau Menantang (Challenge)!`,
               color: 'solar',
               timestamp: Date.now(),
             },
@@ -990,7 +1038,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   respondToChallenge: (acceptPenalty: boolean) => {
-    const { challengeState } = get();
+    const { challengeState, stackCount } = get();
     if (!challengeState) return;
 
     const {
@@ -1003,22 +1051,25 @@ export const useGameStore = create<GameState>((set, get) => ({
       matchingCardsInHand,
     } = challengeState;
 
+    const currentStack = stackCount || 4;
+
     if (acceptPenalty) {
       soundFx.playInferno4();
       set((state) => ({
         challengeState: null,
         gamePhase: 'playing',
+        stackCount: 0,
         logs: [
           {
             id: `log-${Date.now()}`,
-            text: `${targetPlayerName} menerima penalti +4 kartu dari ${wildPlayerName}.`,
+            text: `${targetPlayerName} menerima penalti +${currentStack} kartu dari ${wildPlayerName}.`,
             color: 'crimson',
             timestamp: Date.now(),
           },
           ...state.logs,
         ],
       }));
-      get().inflictDrawPenalty(wildPlayerId, targetPlayerId, 4, 'inferno_4');
+      get().inflictDrawPenalty(wildPlayerId, targetPlayerId, currentStack, 'inferno_4');
       return;
     }
 
@@ -1030,10 +1081,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       set((state) => ({
         challengeState: null,
         gamePhase: 'playing',
+        stackCount: 0,
         logs: [
           {
             id: `log-${Date.now()}`,
-            text: `TANTANGAN BERHASIL! ${wildPlayerName} terbukti BERSALAH memiliki kartu warna ${colorBeforeWild.toUpperCase()} (${cardLabels})! ${wildPlayerName} harus mengambil 4 kartu!`,
+            text: `TANTANGAN BERHASIL! ${wildPlayerName} terbukti BERSALAH memiliki kartu warna ${colorBeforeWild.toUpperCase()} (${cardLabels})! ${wildPlayerName} harus mengambil ${currentStack} kartu!`,
             color: 'toxic',
             timestamp: Date.now(),
           },
@@ -1041,18 +1093,20 @@ export const useGameStore = create<GameState>((set, get) => ({
         ],
       }));
 
-      // Wild player draws 4 cards penalty. Challenger takes turn!
-      get().inflictDrawPenalty(targetPlayerId, wildPlayerId, 4, 'challenge_penalty');
+      // Wild player draws penalty. Challenger takes turn!
+      get().inflictDrawPenalty(targetPlayerId, wildPlayerId, currentStack, 'challenge_penalty');
     } else {
-      // INNOCENT: Wild player had NO matching color cards!
+      // INNOCENT: Wild player had NO matching color cards! Challenger draws stack + 2 penalty!
       soundFx.playInferno4();
+      const penaltyCards = currentStack + 2;
       set((state) => ({
         challengeState: null,
         gamePhase: 'playing',
+        stackCount: 0,
         logs: [
           {
             id: `log-${Date.now()}`,
-            text: `TANTANGAN GAGAL! ${wildPlayerName} JUJUR (tidak punya warna ${colorBeforeWild.toUpperCase()})! ${targetPlayerName} harus mengambil 6 kartu penalti (4 + 2) dan gilirannya dilewati!`,
+            text: `TANTANGAN GAGAL! ${wildPlayerName} JUJUR (tidak punya warna ${colorBeforeWild.toUpperCase()})! ${targetPlayerName} harus mengambil ${penaltyCards} kartu penalti (+2) dan gilirannya dilewati!`,
             color: 'crimson',
             timestamp: Date.now(),
           },
@@ -1060,16 +1114,17 @@ export const useGameStore = create<GameState>((set, get) => ({
         ],
       }));
 
-      // Challenger draws 6 cards (4 + 2 penalty) and loses turn!
-      get().inflictDrawPenalty(wildPlayerId, targetPlayerId, 6, 'challenge_failed');
+      // Challenger draws stack + 2 penalty and loses turn!
+      get().inflictDrawPenalty(wildPlayerId, targetPlayerId, penaltyCards, 'challenge_failed');
     }
   },
+
 
   inflictDrawPenalty: (
     sourcePlayerId: string,
     targetPlayerId: string,
     count: number,
-    type: 'burst_2' | 'inferno_4' | 'rush_penalty' | 'challenge_penalty' | 'challenge_failed'
+    type: 'burst_2' | 'inferno_4' | 'rush_penalty' | 'challenge_penalty' | 'challenge_failed' | 'stack_penalty'
   ) => {
     const { deck, discardPile, players, partyDrinkPenaltyEnabled } = get();
     let currentDeck = [...deck];
@@ -1162,6 +1217,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         } else if (type === 'challenge_penalty') {
           // The wild player took 4 cards penalty. Turn passes to target player (challenger)!
           get().advanceTurn(1);
+        } else if (type === 'stack_penalty') {
+          // Player took the accumulated penalty stack and loses turn
+          get().advanceTurn(1);
         } else {
           // Standard action penalty (+2, +4, +6): victim drew and is skipped!
           get().advanceTurn(2);
@@ -1252,40 +1310,51 @@ export const useGameStore = create<GameState>((set, get) => ({
       ],
     }));
 
-    get().inflictDrawPenalty('system', targetPlayerId, 2, 'rush_penalty');
+    get().inflictDrawPenalty('uno_police', victim.id, 2, 'rush_penalty');
   },
 
-  getNextPlayerIndex: (steps: number = 1, forcedDirection?: TurnDirection): number => {
-    const { currentTurnIndex, turnDirection, players } = get();
+  getNextPlayerIndex: (steps = 1, forcedDirection?: TurnDirection) => {
+    const { players, currentTurnIndex, turnDirection } = get();
     const direction = forcedDirection || turnDirection;
     const total = players.length;
     const offset = direction === 'clockwise' ? steps : -steps;
     return (currentTurnIndex + offset + total * 10) % total;
   },
 
-  advanceTurn: (steps: number = 1, forcedDirection?: TurnDirection) => {
-    const nextIdx = get().getNextPlayerIndex(steps, forcedDirection);
-    const { players } = get();
-    const nextPlayer = players[nextIdx];
+  advanceTurn: (steps = 1, forcedDirection?: TurnDirection) => {
+    if (botTurnTimeout) clearTimeout(botTurnTimeout);
+    if (botWatchdogTimeout) clearTimeout(botWatchdogTimeout);
+    if (rushGraceTimeout) clearTimeout(rushGraceTimeout);
+
+    const { players, winner } = get();
+    if (winner) return;
+
+    const nextIndex = get().getNextPlayerIndex(steps, forcedDirection);
+    const nextPlayer = players[nextIndex];
 
     set({
-      currentTurnIndex: nextIdx,
+      currentTurnIndex: nextIndex,
+      gamePhase: 'playing',
       hasPlayerDrawnThisTurn: false,
       drawnCardId: null,
+      rushCallGracePlayerId: null,
+      rushDuel: null,
     });
 
     if (nextPlayer.isBot) {
-      get().triggerBotTurn(nextIdx);
+      get().triggerBotTurn(nextIndex);
     }
   },
 
   triggerBotTurn: (botIndex: number) => {
     if (botTurnTimeout) clearTimeout(botTurnTimeout);
     if (botWatchdogTimeout) clearTimeout(botWatchdogTimeout);
-    const { botSpeedMs } = get();
 
-    const currentState = get();
-    if (currentState.gamePhase !== 'playing') {
+    const { players, currentTurnIndex, gamePhase, botSpeedMs, winner } = get();
+    if (winner) return;
+    if (currentTurnIndex !== botIndex || !players[botIndex]?.isBot) return;
+
+    if (gamePhase !== 'playing') {
       botTurnTimeout = setTimeout(() => {
         get().triggerBotTurn(botIndex);
       }, 200);
@@ -1306,13 +1375,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       ) {
         const bot = stateNow.players[botIndex];
         const top = stateNow.discardPile[stateNow.discardPile.length - 1];
-        const card = chooseBotCard(bot.hand, top, stateNow.activeColor);
+        const card = chooseBotCard(bot.hand, top, stateNow.activeColor, stateNow.stackCount || 0);
         if (card) {
           get().playCard(bot.id, card.id);
-        } else if (!stateNow.hasPlayerDrawnThisTurn) {
-          get().drawCard(bot.id);
         } else {
-          get().passTurn(bot.id);
+          get().drawCard(bot.id);
         }
       }
     }, Math.max(3500, botSpeedMs + 2000));
@@ -1337,7 +1404,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         ),
       }));
 
-      const chosenCard = chooseBotCard(bot.hand, topDiscard, state.activeColor);
+      const chosenCard = chooseBotCard(bot.hand, topDiscard, state.activeColor, state.stackCount || 0);
 
       if (chosenCard) {
         get().playCard(bot.id, chosenCard.id);
@@ -1385,7 +1452,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     clearActiveMatch();
     const { roomId } = get();
     if (roomId) {
-      socketService.leaveRoom(roomId);
+      socketService.leaveRoom(roomId, getOrCreateClientId(), true);
     }
     set({
       currentScreen: 'menu',
@@ -1394,6 +1461,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       gameMode: 'solo',
       isHost: false,
       isSearchingMatch: false,
+      rematchReadyPlayers: [],
     });
   },
 
@@ -1463,8 +1531,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   startRoomGame: () => {
     const { roomId } = get();
     if (roomId) {
-      saveActiveMatch(roomId, getOrCreateClientId());
-      socketService.startRoomGame(roomId);
+      const clientId = getOrCreateClientId();
+      saveActiveMatch(roomId, clientId);
+      socketService.startRoomGame(roomId, clientId);
     }
   },
 
@@ -1472,7 +1541,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     clearActiveMatch();
     const { roomId } = get();
     if (roomId) {
-      socketService.leaveRoom(roomId);
+      socketService.leaveRoom(roomId, getOrCreateClientId(), true);
     }
     set({
       currentScreen: 'menu',
@@ -1480,8 +1549,21 @@ export const useGameStore = create<GameState>((set, get) => ({
       roomId: null,
       gameMode: 'solo',
       isHost: false,
+      rematchReadyPlayers: [],
     });
     get().initGame();
+  },
+
+  toggleRematchReady: () => {
+    const { gameMode, roomId, myPlayerId, rematchReadyPlayers } = get();
+    if (gameMode !== 'multiplayer' || !roomId || !myPlayerId) return;
+    const isReady = rematchReadyPlayers.includes(myPlayerId);
+    const nextState = !isReady;
+    const nextList = nextState
+      ? [...rematchReadyPlayers, myPlayerId]
+      : rematchReadyPlayers.filter((id) => id !== myPlayerId);
+    set({ rematchReadyPlayers: nextList });
+    socketService.setRematchReady(roomId, nextState);
   },
 
   initMultiplayerSocket: () => {
@@ -1506,7 +1588,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     socket.off('reconnect_failed');
     socket.off('online_users_count');
 
-    socket.on('connect', () => {
+    const handleConnect = () => {
       const activeMatch = getActiveMatch();
       if (activeMatch && activeMatch.roomId) {
         console.log('[Socket] Active match detected! Reconnecting to room:', activeMatch.roomId);
@@ -1522,20 +1604,26 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
       socketService.getPublicRooms();
       socketService.getOnlineCount();
-    });
+    };
+
+    socket.on('connect', handleConnect);
+    if (socket.connected) {
+      handleConnect();
+    }
 
     socket.on('online_users_count', (data: { count: number }) => {
       set({ onlineCount: data.count });
     });
 
-    socket.on('reconnect_success', (data: { roomId: string; playerId: string }) => {
-      console.log('[Socket] Reconnect success for room:', data.roomId);
+    socket.on('reconnect_success', (data: { roomId: string; playerId: string; isHost?: boolean }) => {
+      console.log('[Socket] Reconnect success for room:', data.roomId, 'Host:', data.isHost);
       saveActiveMatch(data.roomId, getOrCreateClientId());
       set({
         currentScreen: 'game',
         gameMode: 'multiplayer',
         roomId: data.roomId,
         myPlayerId: data.playerId,
+        isHost: typeof data.isHost === 'boolean' ? data.isHost : get().isHost,
         roomLobby: null,
       });
     });
@@ -1613,10 +1701,24 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     socket.on('room_lobby_update', (lobbyData: import('../types/game').RoomLobbyState) => {
       const currentSocketId = socket.id;
+      const myClientId = getOrCreateClientId();
+      const meInLobby = lobbyData.players?.find(
+        (p) =>
+          (p.clientPlayerId && p.clientPlayerId === myClientId) ||
+          (p.socketId && currentSocketId && p.socketId === currentSocketId)
+      );
+
+      const isMeHost = Boolean(
+        meInLobby?.isHost ||
+        (lobbyData.hostClientId && lobbyData.hostClientId === myClientId) ||
+        (lobbyData.hostId && currentSocketId && lobbyData.hostId === currentSocketId) ||
+        (lobbyData.players && lobbyData.players.length > 0 && lobbyData.players[0] === meInLobby)
+      );
+
       set({
         roomLobby: lobbyData,
         roomId: lobbyData.roomId,
-        isHost: lobbyData.hostId === currentSocketId,
+        isHost: isMeHost,
         myPlayerId: currentSocketId || null,
       });
     });
@@ -1651,6 +1753,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         rushDuel: RushDuelState | null;
         logs: GameLogEntry[];
         myPlayerId: string;
+        stackCount?: number;
+        rematchReadyPlayers?: string[];
       }) => {
         const currentWinner = get().winner;
 
@@ -1670,11 +1774,10 @@ export const useGameStore = create<GameState>((set, get) => ({
           clearActiveMatch();
         }
 
-        // Performance guard for mobile: If missile/penalty animation is currently running,
-        // do not immediately replace all players' hands (which triggers massive DOM re-renders
-        // and drops animation frames on mobile GPU). Instead, sync table metadata immediately
-        // and defer player hand sync until the 450ms missile animation completes.
         const isAnimationRunning = get().penaltyState !== null || get().cardMissiles !== null;
+        const myPlayer = syncData.players.find((p) => p.id === syncData.myPlayerId);
+        const amIHost = myPlayer ? Boolean(myPlayer.isHost) : get().isHost;
+
         if (isAnimationRunning) {
           set({
             currentScreen: 'game',
@@ -1684,6 +1787,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             activeColor: syncData.activeColor,
             turnDirection: syncData.turnDirection,
             myPlayerId: syncData.myPlayerId,
+            isHost: amIHost,
+            stackCount: syncData.stackCount ?? 0,
+            rematchReadyPlayers: syncData.rematchReadyPlayers ?? [],
             isSearchingMatch: false,
           });
 
@@ -1695,6 +1801,9 @@ export const useGameStore = create<GameState>((set, get) => ({
               winner: syncData.winner,
               rushDuel: syncData.rushDuel,
               logs: syncData.logs,
+              isHost: amIHost,
+              stackCount: syncData.stackCount ?? 0,
+              rematchReadyPlayers: syncData.rematchReadyPlayers ?? [],
             });
           }, 460);
           return;
@@ -1714,6 +1823,9 @@ export const useGameStore = create<GameState>((set, get) => ({
           rushDuel: syncData.rushDuel,
           logs: syncData.logs,
           myPlayerId: syncData.myPlayerId,
+          isHost: amIHost,
+          stackCount: syncData.stackCount ?? 0,
+          rematchReadyPlayers: syncData.rematchReadyPlayers ?? [],
           isSearchingMatch: false,
         });
       }

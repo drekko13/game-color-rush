@@ -84,17 +84,17 @@ export const OpponentSlot: React.FC<OpponentSlotProps> = ({
         <div
           className={`relative w-10 h-10 md:w-14 md:h-14 rounded-full bg-slate-900 border-2 flex items-center justify-center shadow-xl transition-all overflow-hidden ${
             isTurn
-              ? 'border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.5)]'
+              ? 'border-sky-400 ring-2 ring-sky-400/80 shadow-[0_0_20px_rgba(56,189,248,0.8)] scale-105'
               : 'border-slate-700'
           }`}
         >
           <PlayerAvatar avatarId={player.avatar} size="md" border={false} className="!w-full !h-full !rounded-none" />
 
-          {/* Disconnected / Lagging Indicator */}
+          {/* Disconnected / Waiting Indicator */}
           {player.isDisconnected && (
-            <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center backdrop-blur-[1px]">
-              <span className="text-[8px] font-black text-amber-300 bg-amber-500/30 px-1 py-0.5 rounded border border-amber-400/50 animate-pulse">
-                Lag...
+            <div className="absolute inset-0 bg-slate-950/85 flex items-center justify-center backdrop-blur-[1px] rounded-full">
+              <span className="text-[7px] sm:text-[8px] font-black text-amber-300 bg-amber-500/30 px-1 py-0.5 rounded border border-amber-400/50 animate-pulse text-center">
+                Menunggu
               </span>
             </div>
           )}
@@ -130,10 +130,22 @@ export const OpponentSlot: React.FC<OpponentSlotProps> = ({
             <span className="font-bold text-[11px] md:text-sm text-slate-200 tracking-tight whitespace-nowrap">
               {player.name}
             </span>
+            {isTurn && (
+              <span className="text-[8px] md:text-[9px] font-black px-1.5 py-0.5 rounded bg-sky-400 text-slate-950 flex items-center space-x-0.5 shadow-[0_0_12px_rgba(56,189,248,0.9)] animate-pulse shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                <span>GILIRAN</span>
+              </span>
+            )}
             {!player.isBot && (
-              <span className="text-[8px] bg-emerald-500/90 text-slate-950 font-black px-1 py-0.2 rounded-sm flex items-center">
+              <span
+                className={`text-[8px] font-black px-1 py-0.2 rounded-sm flex items-center ${
+                  player.isDisconnected
+                    ? 'bg-amber-500 text-slate-950'
+                    : 'bg-emerald-500/90 text-slate-950'
+                }`}
+              >
                 <span className="w-1.5 h-1.5 rounded-full bg-white mr-0.5 animate-pulse" />
-                LIVE
+                {player.isDisconnected ? 'MENUNGGU' : 'LIVE'}
               </span>
             )}
             {player.hasCalledRush && (

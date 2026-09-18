@@ -81,11 +81,13 @@ export const MainMenuScreen: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-dvh md:h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-slate-100 flex flex-col justify-between select-none overflow-y-auto md:overflow-hidden relative p-3 md:p-6">
-      {/* Ambient background glows */}
-      <div className="absolute top-10 left-1/4 w-96 h-96 bg-rose-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-sky-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/2 right-10 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="w-full max-w-full h-dvh md:h-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black text-slate-100 flex flex-col justify-between select-none overflow-x-hidden overflow-y-auto md:overflow-hidden relative p-3 md:p-6 pb-12 md:pb-6">
+      {/* Ambient background glows (contained so they never cause horizontal scroll on mobile) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-1/4 w-96 h-96 bg-rose-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-sky-600/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 right-10 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl" />
+      </div>
 
       {/* Top Brand Pill Header */}
       <header className="w-full max-w-7xl mx-auto flex items-center justify-between py-1.5 px-3 md:px-5 rounded-2xl bg-slate-950/60 border border-white/10 backdrop-blur-md z-20 shrink-0">
@@ -129,7 +131,7 @@ export const MainMenuScreen: React.FC = () => {
       </header>
 
       {/* Main Grid: Left (Brand & Profile) vs Right (Single & Multiplayer Modes) */}
-      <main className="w-full max-w-7xl mx-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 my-auto items-center py-3 z-10">
+      <main className="w-full max-w-7xl mx-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 my-auto items-center py-2 md:py-3 z-10">
         {/* =========================================================================
             LEFT COLUMN (lg:col-span-5): Game Visual Showcase & Profile Setup
             ========================================================================= */}
@@ -241,52 +243,56 @@ export const MainMenuScreen: React.FC = () => {
         {/* =========================================================================
             RIGHT COLUMN (lg:col-span-7): Action Cards: Single Player & Multiplayer Hub
             ========================================================================= */}
-        <div className={`lg:col-span-7 flex flex-col space-y-4 ${showMobileModes ? 'flex' : 'hidden lg:flex'}`}>
+        <div className={`lg:col-span-7 flex flex-col space-y-3 sm:space-y-4 ${showMobileModes ? 'flex' : 'hidden lg:flex'}`}>
           {/* Mobile Navigation Header: Back to Initial Menu */}
-          <div className="lg:hidden flex items-center justify-between pb-1 border-b border-white/10">
+          <div className="lg:hidden flex items-center justify-between py-1 px-0.5 border-b border-white/10 mb-1">
             <button
               onClick={() => {
                 soundFx.playCardDraw();
                 setShowMobileModes(false);
               }}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center space-x-1.5 transition-all shadow border border-white/10 active:scale-95"
+              className="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center space-x-1.5 transition-all shadow-md border border-white/10 active:scale-95"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4 text-amber-400" />
               <span>Kembali</span>
             </button>
-            <span className="text-xs font-black text-amber-300 uppercase tracking-wider">
-              Pilih Mode Bermain
-            </span>
+            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-400/25 text-amber-300">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[11px] font-black uppercase tracking-wider">
+                Pilih Mode Bermain
+              </span>
+            </div>
           </div>
+
           {/* Card 1: Play Single Player (vs AI Bot) */}
           <motion.div
             whileHover={{ scale: 1.01 }}
-            className="p-4 md:p-5 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/60 border border-emerald-500/30 shadow-2xl relative overflow-hidden group cursor-pointer"
+            className="p-3.5 sm:p-5 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/60 border border-emerald-500/30 shadow-2xl relative overflow-hidden group cursor-pointer"
             onClick={handleStartSolo}
           >
             <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative z-10">
-              <div className="flex items-center space-x-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-black shrink-0">
-                  <Bot className="w-6 h-6" />
+              <div className="flex items-center space-x-3">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-black shrink-0">
+                  <Bot className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-base md:text-lg font-black text-white uppercase tracking-wider">
+                    <h3 className="text-sm sm:text-base md:text-lg font-black text-white uppercase tracking-wider">
                       Main Single Player
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-400/30">
                       VS BOT
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 mt-0.5">
+                  <p className="text-[11px] sm:text-xs text-slate-300 mt-0.5">
                     Langsung bermain offline melawan 3 AI Bot cerdas (Blaze Bot, Cyber Surge, Neon Bloom).
                   </p>
                 </div>
               </div>
 
-              <button className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow-lg group-hover:shadow-emerald-500/50 transition-all shrink-0">
+              <button className="w-full sm:w-auto px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow-lg group-hover:shadow-emerald-500/50 transition-all shrink-0">
                 <span>Mulai Solo</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
@@ -294,7 +300,7 @@ export const MainMenuScreen: React.FC = () => {
           </motion.div>
 
           {/* Card 2: Multiplayer Arena Hub */}
-          <div className="p-4 md:p-5 rounded-3xl bg-slate-900/80 border border-white/10 shadow-2xl backdrop-blur-md space-y-4">
+          <div className="p-3.5 sm:p-5 rounded-3xl bg-slate-900/80 border border-white/10 shadow-2xl backdrop-blur-md space-y-3.5 sm:space-y-4">
             {/* Multiplayer Header */}
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <div className="flex items-center space-x-3">
@@ -302,7 +308,7 @@ export const MainMenuScreen: React.FC = () => {
                   <Users className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm md:text-base font-black text-white uppercase tracking-wide">
+                  <h3 className="text-sm sm:text-base font-black text-white uppercase tracking-wide">
                     Multiplayer Online Hub
                   </h3>
                   <p className="text-[11px] text-slate-400">
@@ -311,69 +317,69 @@ export const MainMenuScreen: React.FC = () => {
                 </div>
               </div>
 
-              <span className="px-2.5 py-1 rounded-full bg-sky-500/10 text-sky-400 text-[10px] font-black border border-sky-400/20 flex items-center space-x-1">
+              <span className="px-2.5 py-1 rounded-full bg-sky-500/10 text-sky-400 text-[10px] font-black border border-sky-400/20 flex items-center space-x-1 shrink-0">
                 <Radio className="w-3 h-3 animate-pulse" />
                 <span>ONLINE</span>
               </span>
             </div>
 
-            {/* Multiplayer Sub-Tabs */}
-            <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-950 border border-white/5 text-[11px] font-bold">
+            {/* Multiplayer Sub-Tabs: 2x2 grid on mobile for optimal tap targets & clean non-wrapping labels, 4 cols on desktop */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-slate-950/80 border border-white/10 text-xs font-bold">
               <button
                 onClick={() => setMultiplayerTab('quick')}
-                className={`py-2 px-1 rounded-xl transition-all flex items-center justify-center space-x-1 ${
+                className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
                   multiplayerTab === 'quick'
-                    ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Zap className="w-3.5 h-3.5" />
-                <span>Matching</span>
+                <Zap className="w-3.5 h-3.5 text-amber-300" />
+                <span>Quick Match</span>
               </button>
               <button
                 onClick={() => setMultiplayerTab('create')}
-                className={`py-2 px-1 rounded-xl transition-all flex items-center justify-center space-x-1 ${
+                className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
                   multiplayerTab === 'create'
-                    ? 'bg-purple-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <PlusCircle className="w-3.5 h-3.5" />
+                <PlusCircle className="w-3.5 h-3.5 text-purple-300" />
                 <span>Buat Room</span>
               </button>
               <button
                 onClick={() => setMultiplayerTab('join')}
-                className={`py-2 px-1 rounded-xl transition-all flex items-center justify-center space-x-1 ${
+                className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
                   multiplayerTab === 'join'
-                    ? 'bg-indigo-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Gabung</span>
+                <LogIn className="w-3.5 h-3.5 text-indigo-300" />
+                <span>Gabung Kode</span>
               </button>
               <button
                 onClick={() => setMultiplayerTab('public')}
-                className={`py-2 px-1 rounded-xl transition-all flex items-center justify-center space-x-1 relative ${
+                className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 relative ${
                   multiplayerTab === 'public'
-                    ? 'bg-rose-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-rose-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Globe className="w-3.5 h-3.5" />
+                <Globe className="w-3.5 h-3.5 text-rose-300" />
                 <span>Publik ({publicRooms.length})</span>
               </button>
             </div>
 
             {/* Tab 1: Matching Random Room */}
             {multiplayerTab === 'quick' && (
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white flex items-center">
+                  <h4 className="text-xs sm:text-sm font-bold text-white flex items-center">
                     <Zap className="w-4 h-4 mr-1.5 text-amber-400" />
                     Matching Room Acak (Quick Match)
                   </h4>
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
                     Sistem akan mencarikan room publik aktif secara otomatis. Jika belum ada yang buka, room publik baru akan dibuatkan untukmu!
                   </p>
                 </div>
@@ -382,7 +388,7 @@ export const MainMenuScreen: React.FC = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleRandomMatch}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white font-black text-xs md:text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(2,132,199,0.4)] flex items-center justify-center space-x-2"
+                  className="w-full py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(2,132,199,0.4)] flex items-center justify-center space-x-2"
                 >
                   <Radio className="w-4 h-4 animate-pulse" />
                   <span>Cari Match Sekarang</span>
@@ -392,13 +398,13 @@ export const MainMenuScreen: React.FC = () => {
 
             {/* Tab 2: Buat Room (Settings: Public/Private & 2, 3, 4 Slots) */}
             {multiplayerTab === 'create' && (
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3.5">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3.5">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white flex items-center">
+                  <h4 className="text-xs sm:text-sm font-bold text-white flex items-center">
                     <PlusCircle className="w-4 h-4 mr-1.5 text-purple-400" />
                     Pengaturan Room Baru
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-[11px] sm:text-xs text-slate-400">
                     Atur visibilitas room dan jumlah kapasitas slot pemain
                   </p>
                 </div>
@@ -417,8 +423,11 @@ export const MainMenuScreen: React.FC = () => {
                           : 'bg-slate-900 border-white/5 text-slate-400 hover:text-white'
                       }`}
                     >
-                      <Globe className="w-3.5 h-3.5 text-purple-300" />
-                      <span>Publik (Muncul di List)</span>
+                      <Globe className="w-4 h-4 text-purple-300 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-bold text-xs text-white">Publik</div>
+                        <div className="text-[10px] text-slate-400">Muncul di List</div>
+                      </div>
                     </button>
 
                     <button
@@ -429,8 +438,11 @@ export const MainMenuScreen: React.FC = () => {
                           : 'bg-slate-900 border-white/5 text-slate-400 hover:text-white'
                       }`}
                     >
-                      <Lock className="w-3.5 h-3.5 text-amber-300" />
-                      <span>Private (Hanya Kode)</span>
+                      <Lock className="w-4 h-4 text-amber-300 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-bold text-xs text-white">Private</div>
+                        <div className="text-[10px] text-slate-400">Hanya via Kode</div>
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -467,7 +479,7 @@ export const MainMenuScreen: React.FC = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleCreateRoom}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white font-black text-xs md:text-sm uppercase tracking-wider shadow-lg shadow-purple-600/30 flex items-center justify-center space-x-2"
+                  className="w-full py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-lg shadow-purple-600/30 flex items-center justify-center space-x-2"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>Buat Room ({roomIsPublic ? 'Publik' : 'Private'} • {roomMaxSlots} Slot)</span>
@@ -477,32 +489,33 @@ export const MainMenuScreen: React.FC = () => {
 
             {/* Tab 3: Gabung Room (Kode) */}
             {multiplayerTab === 'join' && (
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white flex items-center">
+                  <h4 className="text-xs sm:text-sm font-bold text-white flex items-center">
                     <LogIn className="w-4 h-4 mr-1.5 text-indigo-400" />
                     Gabung dengan Kode Room
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-[11px] sm:text-xs text-slate-400">
                     Masukkan kode 4-karakter yang dibagikan oleh temanmu
                   </p>
                 </div>
 
-                <div className="flex space-x-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={joinInput}
                     maxLength={6}
                     onChange={(e) => setJoinInput(e.target.value.toUpperCase())}
                     placeholder="KODE ROOM"
-                    className="w-36 bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-center font-black text-sm text-white uppercase tracking-widest focus:outline-none focus:border-indigo-500 shadow-inner"
+                    className="w-full sm:w-44 bg-slate-900 border border-white/10 rounded-xl px-3 py-2.5 text-center font-black text-sm text-white uppercase tracking-widest focus:outline-none focus:border-indigo-500 shadow-inner"
                   />
                   <button
                     onClick={handleJoinByCode}
                     disabled={!joinInput.trim()}
-                    className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-black text-xs uppercase tracking-wider shadow transition-all"
+                    className="w-full sm:flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-black text-xs uppercase tracking-wider shadow transition-all flex items-center justify-center space-x-1.5"
                   >
-                    Gabung Room
+                    <LogIn className="w-4 h-4" />
+                    <span>Gabung Room</span>
                   </button>
                 </div>
               </div>

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useGameStore } from '../store/useGameStore';
-import { Trophy, RotateCcw, Beer, Skull, Home } from 'lucide-react';
+import { Trophy, RotateCcw, Beer, Skull, Home, CheckCircle2, Clock, Users } from 'lucide-react';
 import { PlayerAvatar } from './PlayerAvatar';
 
 export const VictoryModal: React.FC = () => {
@@ -19,6 +19,8 @@ export const VictoryModal: React.FC = () => {
     isHost,
     startRoomGame,
     returnToMainMenu,
+    rematchReadyPlayers,
+    toggleRematchReady,
   } = useGameStore();
 
   const isGameOver = gamePhase === 'game_over';
@@ -31,6 +33,16 @@ export const VictoryModal: React.FC = () => {
 
   // Current player is the winner ONLY if their ID strictly matches winner.id
   const isMeWinner = Boolean(winner && myPlayer && winner.id === myPlayer.id);
+
+  // Rematch readiness logic in multiplayer
+  const otherHumans = players.filter(
+    (p) => !p.isBot && (myPlayer ? p.id !== myPlayer.id : true) && !p.isDisconnected
+  );
+  const readyCount = otherHumans.filter((p) => rematchReadyPlayers.includes(p.id)).length;
+  const totalOtherHumans = otherHumans.length;
+  const allPlayersReady = totalOtherHumans === 0 || readyCount === totalOtherHumans;
+
+  const isMyReady = Boolean(myPlayer && rematchReadyPlayers.includes(myPlayer.id));
 
   useEffect(() => {
     if (isGameOver && isMeWinner) {
@@ -127,7 +139,7 @@ export const VictoryModal: React.FC = () => {
           </p>
 
           {/* Final Standings Table with Official Points */}
-          <div className="space-y-2 mb-6 text-left">
+          <div className="space-y-2 mb-4 text-left">
             <div className="flex items-center justify-between text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1 px-1">
               <span>Standings & UNO Points</span>
               <span>Target: {targetScore} Pts</span>
@@ -190,42 +202,160 @@ export const VictoryModal: React.FC = () => {
             })}
           </div>
 
+          {/* Multiplayer Rematch Readiness Panel */}
+          {gameMode === 'multiplayer' && (
+            <div className="mb-5 p-3 rounded-2xl bg-slate-950/80 border border-white/10 text-left">
+              <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider mb-2 px-1">
+                <span className="flex items-center gap-1.5 text-slate-300">
+                  <Users className="w-3.5 h-3.5 text-sky-400" />
+                  Kesiapan Main Lagi
+                </span>
+                <span className="text-[10px]">
+                  {allPlayersReady ? (
+                    <span className="text-emerald-400 font-black flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Semua Siap!
+                    </span>
+                  ) : (
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      <Clock className="w-3 h-3 animate-spin" /> {readyCount}/{totalOtherHumans} Siap
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                {players.map((p) => {
+                  const isThisMe = myPlayer && p.id === myPlayer.id;
+                  const isThisHost = p.isHost ?? (isThisMe ? isHost : false);
+                  const isReady = rematchReadyPlayers.includes(p.id);
+
+                  return (
+                    <div
+                      key={p.id}
+                      className={`p-1.5 px-2 rounded-xl border flex items-center justify-between text-xs transition-colors ${
+                        p.isBot
+                          ? 'bg-slate-900/60 border-white/5 text-slate-400'
+                          : isThisHost
+                          ? 'bg-purple-950/30 border-purple-500/30 text-purple-200'
+                          : isReady
+                          ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                          : 'bg-slate-900/60 border-white/5 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-1.5 truncate mr-1">
+                        <PlayerAvatar avatarId={p.avatar} size="xs" />
+                        <span className="truncate text-[10px] font-semibold">
+                          {p.name} {isThisMe && '(Kamu)'}
+                        </span>
+                      </div>
+
+                      <div className="shrink-0">
+                        {p.isBot ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                            BOT
+                          </span>
+                        ) : isThisHost ? (
+                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                            HOST
+                          </span>
+                        ) : isReady ? (
+                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 flex items-center gap-0.5">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> SIAP
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 animate-pulse flex items-center gap-0.5">
+                            <Clock className="w-2.5 h-2.5" /> MENUNGGU
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           {gameMode === 'multiplayer' ? (
             isHost ? (
-              <div className="flex flex-col sm:flex-row gap-2.5">
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => startRoomGame()}
-                  className="flex-1 flex items-center justify-center space-x-2 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 font-black text-xs md:text-sm tracking-wider uppercase shadow-[0_0_20px_rgba(16,185,129,0.5)]"
-                >
-                  <RotateCcw className="w-4 h-4 text-slate-950" />
-                  <span>Main Lagi (Host)</span>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => returnToMainMenu()}
-                  className="flex-1 flex items-center justify-center space-x-2 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs md:text-sm tracking-wider uppercase transition-colors"
-                >
-                  <Home className="w-4 h-4" />
-                  <span>Menu Utama</span>
-                </motion.button>
+              <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <motion.button
+                    whileHover={allPlayersReady ? { scale: 1.03 } : {}}
+                    whileTap={allPlayersReady ? { scale: 0.97 } : {}}
+                    onClick={() => {
+                      if (allPlayersReady) {
+                        startRoomGame();
+                      }
+                    }}
+                    disabled={!allPlayersReady}
+                    className={`flex-1 flex items-center justify-center space-x-2 py-3.5 rounded-2xl font-black text-xs md:text-sm tracking-wider uppercase transition-all ${
+                      allPlayersReady
+                        ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 shadow-[0_0_25px_rgba(16,185,129,0.5)] cursor-pointer'
+                        : 'bg-slate-800/80 text-slate-500 border border-slate-700/60 cursor-not-allowed opacity-60'
+                    }`}
+                  >
+                    <RotateCcw className={`w-4 h-4 ${allPlayersReady ? 'text-slate-950' : 'text-slate-500'}`} />
+                    <span>
+                      {allPlayersReady
+                        ? totalOtherHumans > 0
+                          ? 'Mulai Main Lagi (Semua Siap!)'
+                          : 'Main Lagi (Host)'
+                        : `Menunggu Pemain Siap (${readyCount}/${totalOtherHumans})`}
+                    </span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => returnToMainMenu()}
+                    className="py-3.5 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs md:text-sm tracking-wider uppercase transition-colors flex items-center justify-center space-x-1.5"
+                  >
+                    <Home className="w-4 h-4" />
+                    <span>Menu Utama</span>
+                  </motion.button>
+                </div>
+                {!allPlayersReady && (
+                  <p className="text-[11px] text-amber-400/90 text-center font-medium">
+                    Tombol Main Lagi dinonaktifkan sampai seluruh pemain di dalam room menekan tombol Siap.
+                  </p>
+                )}
               </div>
             ) : (
-              <div className="space-y-2">
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => returnToMainMenu()}
-                  className="w-full flex items-center justify-center space-x-2 py-3.5 rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-sky-600 text-white font-black text-xs md:text-sm tracking-wider uppercase shadow-lg"
-                >
-                  <Home className="w-4 h-4 text-white" />
-                  <span>Kembali ke Menu Utama</span>
-                </motion.button>
+              <div className="space-y-2.5">
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => toggleRematchReady()}
+                    className={`flex-1 flex items-center justify-center space-x-2 py-3.5 rounded-2xl font-black text-xs md:text-sm tracking-wider uppercase transition-all shadow-lg ${
+                      isMyReady
+                        ? 'bg-slate-800 hover:bg-slate-700 text-emerald-300 border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]'
+                        : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 shadow-[0_0_25px_rgba(16,185,129,0.5)]'
+                    }`}
+                  >
+                    <CheckCircle2 className={`w-4 h-4 ${isMyReady ? 'text-emerald-400' : 'text-slate-950'}`} />
+                    <span>{isMyReady ? 'SUDAH SIAP (KLIK UNTUK BATAL)' : 'SIAP MAIN LAGI (READY)'}</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => returnToMainMenu()}
+                    className="py-3.5 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs md:text-sm tracking-wider uppercase transition-colors flex items-center justify-center space-x-1.5"
+                  >
+                    <Home className="w-4 h-4" />
+                    <span>Menu Utama</span>
+                  </motion.button>
+                </div>
                 <p className="text-[11px] text-center text-slate-400">
-                  Menunggu host memulai rematch atau kamu bisa kembali ke menu utama.
+                  {isMyReady ? (
+                    <span className="text-emerald-300 font-medium">
+                      ✅ Kamu sudah Siap! Menunggu Host memulai permainan ulang...
+                    </span>
+                  ) : (
+                    <span className="text-amber-300 font-medium">
+                      ⚠️ Tekan "SIAP MAIN LAGI" agar Host dapat memulai permainan ulang.
+                    </span>
+                  )}
                 </p>
               </div>
             )
@@ -256,3 +386,4 @@ export const VictoryModal: React.FC = () => {
     </AnimatePresence>
   );
 };
+

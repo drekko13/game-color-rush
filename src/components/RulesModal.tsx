@@ -30,10 +30,10 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
 
           <h2 className="text-xl font-black text-white tracking-wide uppercase mb-1 flex items-center">
             <BookOpen className="w-5 h-5 mr-2 text-sky-400" />
-            Panduan & Aturan Resmi UNO
+            Panduan & Aturan Resmi ColorRush
           </h2>
           <p className="text-[11px] text-slate-400 mb-5">
-            Berdasarkan aturan resmi Mattel UNO (<span className="text-sky-400 font-mono">unorules.com</span>)
+            Berdasarkan aturan resmi ColorRush
           </p>
 
           <div className="space-y-6 text-sm text-slate-300">
@@ -78,33 +78,32 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
 
-            {/* 2. Aturan Kartu Pertama di Discard Pile */}
-            <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/10">
-              <h3 className="text-xs font-black text-amber-300 uppercase tracking-wider mb-2">
-                2. Efek Kartu Pembuka (Kartu Pertama)
+            {/* 2. Aturan Stacking (+2 & +4) */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-950/50 via-slate-900 to-slate-900 border border-rose-500/40">
+              <h3 className="text-xs font-black text-rose-300 uppercase tracking-wider mb-2 flex items-center">
+                <Flame className="w-4 h-4 mr-1.5 text-rose-400" />
+                2. Aturan Menumpuk Kartu (Stacking +2 & +4)
               </h3>
+              <p className="text-xs text-slate-300 leading-relaxed mb-2">
+                Kartu <strong>+2 (BURST +2)</strong> dan <strong>+4 (INFERNO +4)</strong> dapat ditumpuk (*stack*):
+              </p>
               <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside leading-relaxed">
-                <li><strong className="text-white">Draw Two (BURST +2):</strong> Pemain pertama langsung mengambil 2 kartu dan gilirannya dilewati!</li>
-                <li><strong className="text-white">Skip (HALT):</strong> Giliran pemain pertama langsung dilewati.</li>
-                <li><strong className="text-white">Reverse (REWIND):</strong> Arah putaran dibalik ke berlawanan jarum jam; pemain di kanan dealer jalan duluan.</li>
-                <li><strong className="text-white">Wild (SPECTRUM):</strong> Pemain pertama bebas memilih warna awal untuk memulai permainan.</li>
-                <li><strong className="text-white">Wild Draw Four:</strong> <em>Dilarang menjadi kartu pertama.</em> Kartu dikembalikan ke dek, dikocok ulang, dan kartu baru dibuka.</li>
+                <li><strong className="text-white">+2 hanya bisa ditumpuk di atas +2.</strong></li>
+                <li><strong className="text-amber-300">+4 dapat ditumpuk di atas +2 maupun +4.</strong> (+2 tidak bisa ditumpuk di atas +4).</li>
+                <li>Pemain yang <strong>tidak dapat / tidak menumpuk kartu</strong> wajib mengambil <strong>seluruh total kartu penalti yang terakumulasi</strong> (+2, +4, +6, +8, dst.) dan gilirannya dilewati!</li>
               </ul>
             </div>
 
-            {/* 3. Aturan Draw & Stacking */}
+            {/* 3. Force Play */}
             <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/10">
               <h3 className="text-xs font-black text-sky-300 uppercase tracking-wider mb-2">
-                3. Aturan Ambil Kartu (Draw) & Larangan Stacking
+                3. Force Play (Main Otomatis Saat Draw)
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed mb-2">
-                • Jika pemain tidak memiliki kartu yang cocok (atau memilih tidak memainkannya), pemain wajib mengambil <strong>tepat 1 kartu</strong> dari Draw Pile.
+                Sesuai aturan resmi Mattel ColorRush, jika kamu mengambil kartu dari deck (*draw card*) dan kartu yang kamu peroleh <strong>cocok / dapat dimainkan</strong>, kartu tersebut <strong>akan langsung dimainkan secara otomatis</strong> (*Force Play*).
               </p>
-              <p className="text-xs text-slate-300 leading-relaxed mb-2">
-                • Jika kartu yang baru ditarik tersebut cocok, pemain <strong>boleh langsung memainkannya</strong>. Jika tidak cocok (atau pemain memilih menyimpannya), pemain menekan <strong>Pass Turn</strong> untuk melanjutkan giliran ke pemain berikutnya. Kartu lama yang sudah ada di tangan tidak boleh dimainkan setelah draw.
-              </p>
-              <p className="text-xs text-rose-300 leading-relaxed font-semibold">
-                • <strong>Larangan Stacking:</strong> Sesuai aturan resmi Mattel UNO, menumpuk kartu penalti (misal menaruh +2 di atas +2 atau +4 di atas +4) tidak diperbolehkan.
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Jika kartu yang diambil tidak cocok, giliranmu langsung berakhir dan berlanjut ke pemain berikutnya.
               </p>
             </div>
 
@@ -137,7 +136,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                     BURST +2 (Draw Two)
                   </span>
                   <p className="text-xs text-slate-300">
-                    Memaksa pemain berikutnya mengambil 2 kartu dan gilirannya dilewati!
+                    Memaksa pemain berikutnya mengambil 2 kartu (bisa ditumpuk dengan +2 atau +4)!
                   </p>
                 </div>
 
@@ -156,10 +155,10 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
             <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-950/60 via-slate-900 to-slate-900 border border-rose-500/40">
               <h3 className="font-black text-rose-300 uppercase tracking-wide text-xs mb-1.5 flex items-center">
                 <Swords className="w-4 h-4 text-rose-400 mr-1.5" />
-                <span>5. Aturan Resmi Wild Draw +4 & Tantangan (Challenge)</span>
+                <span>5. Aturan Wild Draw +4 & Tantangan (Challenge)</span>
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed mb-2">
-                Kartu Wild Draw +4 (INFERNO +4) hanya sah dimainkan jika pemain <strong>TIDAK memiliki kartu berwarna sama</strong> dengan warna aktif. Pemain korban berhak mengajukan <strong>Tantangan (Challenge)</strong>:
+                Kartu Wild Draw +4 (INFERNO +4) hanya sah dimainkan jika pemain <strong>TIDAK memiliki kartu berwarna sama</strong> dengan kartu sebelumnya di meja. Pemain korban berhak mengajukan <strong>Tantangan (Challenge)</strong>:
               </p>
               <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside">
                 <li><strong className="text-emerald-400">Jika Bersalah (Bluffing):</strong> Pemain yang memainkan +4 terbukti punya warna tersebut; ia harus mengambil <strong>4 kartu penalti</strong>. Korban bebas penalti & bermain normal!</li>
@@ -174,7 +173,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
                 <span>6. Aturan Teriak "UNO!" (Penalti +2 Kartu)</span>
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Saat kamu hanya memegang <strong>1 kartu</strong> di tangan, kamu wajib menekan tombol <strong>"UNO!"</strong>! Jika kamu lupa atau kalah cepat ditangkap lawan sebelum giliran berikutnya berjalan, kamu terkena penalti resmi mengambil <strong>+2 KARTU</strong>! Begitu juga sebaliknya: jika lawan sisa 1 kartu dan kamu lebih cepat menangkapnya, lawan terkena penalti +2 kartu.
+                Saat kamu hanya memegang <strong>1 kartu</strong> di tangan, kamu wajib menekan tombol <strong>"UNO!"</strong>! Jika kamu lupa atau kalah cepat ditangkap lawan, kamu terkena penalti resmi mengambil <strong>+2 KARTU</strong>! Begitu juga sebaliknya: jika lawan sisa 1 kartu dan kamu lebih cepat menangkapnya, lawan terkena penalti +2 kartu.
               </p>
             </div>
 

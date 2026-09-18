@@ -31,6 +31,9 @@ export interface Player {
   roundScore?: number;
   clientPlayerId?: string;
   isDisconnected?: boolean;
+  isAway?: boolean;
+  isLeft?: boolean;
+  isHost?: boolean;
 }
 
 export type TurnDirection = 'clockwise' | 'counter-clockwise';
@@ -50,6 +53,7 @@ export interface RoomLobbyPlayer {
 export interface RoomLobbyState {
   roomId: string;
   hostId: string;
+  hostClientId?: string;
   players: RoomLobbyPlayer[];
   status: 'waiting' | 'playing';
   isPublic: boolean;
@@ -75,7 +79,7 @@ export type GamePhase =
 
 export interface PenaltyAnimationState {
   id: string;
-  type: 'burst_2' | 'inferno_4' | 'rush_penalty' | 'challenge_penalty' | 'challenge_failed';
+  type: 'burst_2' | 'inferno_4' | 'rush_penalty' | 'challenge_penalty' | 'challenge_failed' | 'stack_penalty';
   sourcePlayerId: string;
   targetPlayerId: string;
   cardsCount: number;

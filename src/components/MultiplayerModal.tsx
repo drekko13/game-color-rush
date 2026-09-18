@@ -46,7 +46,26 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
     startRoomGame,
     leaveRoom,
     startSoloGame,
+    currentScreen,
+    players,
   } = useGameStore();
+
+  const isMatchInProgress = currentScreen === 'game' || roomLobby?.status === 'playing';
+  const myPlayerInGame = players.find((p) => (myPlayerId ? p.id === myPlayerId : !p.isBot));
+  const effectiveIsHost = isMatchInProgress
+    ? Boolean(myPlayerInGame?.isHost ?? isHost)
+    : isHost;
+
+  const handleCloseModal = () => {
+    if (currentScreen === 'lobby') {
+      if (window.confirm('Keluar dari room ini?')) {
+        leaveRoom();
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<'matchmaking' | 'custom' | 'solo'>('matchmaking');
   const [joinCodeInput, setJoinCodeInput] = useState('');
@@ -81,7 +100,6 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
 
   const handleStartGameClick = () => {
     startRoomGame();
-    onClose();
   };
 
   // Players in the room (prefer authoritative roomLobby if available)
@@ -101,8 +119,11 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md"
+      >
         <motion.div
+          onClick={(e) => e.stopPropagation()}
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
@@ -113,28 +134,30 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
 
           {/* Close button */}
           <button
-            onClick={() => {
-              if (roomId) {
-                leaveRoom();
-              }
-              onClose();
-            }}
-            className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+            onClick={handleCloseModal}
+            className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            title="Tutup Modal"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Modal Header */}
           <div className="flex items-center space-x-2.5 mb-5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg ${
+              isMatchInProgress
+                ? 'bg-gradient-to-tr from-emerald-500 to-teal-600'
+                : 'bg-gradient-to-tr from-sky-500 to-indigo-600'
+            }`}>
               <Users className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="text-lg md:text-xl font-black text-white tracking-wide uppercase">
-                Multiplayer Lobby
+                {isMatchInProgress ? 'Informasi Room' : 'Multiplayer Lobby'}
               </h2>
               <p className="text-xs text-slate-400">
-                Play in real-time with other players online
+                {isMatchInProgress
+                  ? `Pertandingan sedang berlangsung di Room ${roomId}`
+                  : 'Play in real-time with other players online'}
               </p>
             </div>
           </div>
@@ -263,139 +286,273 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
           {/* Tab 2: Custom Private Room */}
           {activeTab === 'custom' && (
             <div className="space-y-4 py-1">
-              {/* If in a Room Lobby -> Show Live Waiting Room with START GAME Button! */}
+              {/* If in a Room -> Show Active Match Info or Waiting Lobby */}
               {roomId ? (
-                <div className="space-y-4">
-                  {/* Room Code Card */}
-                  <div className="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/40 text-center">
-                    <span className="text-[10px] font-black text-purple-300 uppercase tracking-wider block mb-1">
-                      KODE ROOM (BAGIKAN KE TEMAN)
-                    </span>
-                    <div className="flex items-center justify-center space-x-2">
-                      <span className="text-3xl font-black text-white tracking-widest bg-slate-950 px-4 py-1.5 rounded-xl border border-purple-400">
-                        {roomId}
+                isMatchInProgress ? (
+                  /* IN-GAME ROOM DETAILS VIEW */
+                  <div className="space-y-4">
+                    {/* Status Live Banner */}
+                    <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between">
+                      <div className="flex items-center space-x-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                        <div>
+                          <span className="text-xs font-black text-emerald-300 uppercase tracking-wider block">
+                            Pertandingan Sedang Berlangsung
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Room Aktif • {effectiveIsHost ? 'Kamu adalah Host' : 'Tamu / Pemain'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-black uppercase">
+                        LIVE
                       </span>
-                      <button
-                        onClick={handleCopyCode}
-                        className="p-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow transition-all"
-                        title="Salin Kode Room"
+                    </div>
+
+                    {/* Room Code Card */}
+                    <div className="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/40 text-center">
+                      <span className="text-[10px] font-black text-purple-300 uppercase tracking-wider block mb-1">
+                        KODE ROOM (BAGIKAN KE TEMAN)
+                      </span>
+                      <div className="flex items-center justify-center space-x-2">
+                        <span className="text-3xl font-black text-white tracking-widest bg-slate-950 px-4 py-1.5 rounded-xl border border-purple-400">
+                          {roomId}
+                        </span>
+                        <button
+                          onClick={handleCopyCode}
+                          className="p-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow transition-all"
+                          title="Salin Kode Room"
+                        >
+                          {copied ? <Check className="w-5 h-5 text-emerald-300" /> : <Copy className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Connected Players in Active Match */}
+                    <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                          Pemain dalam Pertandingan ({players.length})
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-semibold">
+                          Kartu di Tangan
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {players.map((p) => {
+                          const isMe = myPlayerId ? p.id === myPlayerId : !p.isBot;
+                          return (
+                            <div
+                              key={p.id}
+                              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                                isMe
+                                  ? 'bg-sky-950/60 border-sky-500/40 shadow-sm ring-1 ring-sky-500/30'
+                                  : 'bg-slate-950/80 border-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-2.5">
+                                <PlayerAvatar avatarId={p.avatar} size="sm" />
+                                <div>
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="font-bold text-xs text-white">{p.name}</span>
+                                    {isMe && (
+                                      <span className="text-[9px] font-black text-sky-400 bg-sky-500/20 px-1.5 py-0.2 rounded border border-sky-400/30 uppercase">
+                                        Kamu
+                                      </span>
+                                    )}
+                                    {p.isHost && (
+                                      <span className="text-[9px] font-black text-amber-300 bg-amber-500/20 px-1.5 py-0.2 rounded border border-amber-400/30 uppercase">
+                                        Host
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-slate-400 block">
+                                    {p.isBot ? 'Bot AI' : 'Pemain Online'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="text-right">
+                                <span className="font-mono font-bold text-xs text-amber-300">
+                                  {p.hand.length} Kartu
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons for in-game modal */}
+                    <div className="space-y-2 pt-1">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={onClose}
+                        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 font-black text-xs md:text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(16,185,129,0.5)] flex items-center justify-center space-x-2 cursor-pointer"
                       >
-                        {copied ? <Check className="w-5 h-5 text-emerald-300" /> : <Copy className="w-5 h-5" />}
+                        <Play className="w-4 h-4 fill-slate-950" />
+                        <span>Lanjutkan Permainan (Tutup Modal)</span>
+                      </motion.button>
+
+                      <button
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              'Apakah kamu yakin ingin keluar dari pertandingan ini? Kamu akan kembali ke Menu Utama.'
+                            )
+                          ) {
+                            leaveRoom();
+                            onClose();
+                          }
+                        }}
+                        className="w-full py-2 rounded-xl bg-slate-800/80 hover:bg-rose-950/60 text-rose-400 border border-rose-500/20 font-bold text-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Keluar dari Pertandingan</span>
                       </button>
                     </div>
                   </div>
-
-                  {/* Connected Players in Room */}
-                  <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/5 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                        Pemain di Room ({lobbyPlayers.length}/4)
+                ) : (
+                  /* PRE-GAME LOBBY VIEW */
+                  <div className="space-y-4">
+                    {/* Room Code Card */}
+                    <div className="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/40 text-center">
+                      <span className="text-[10px] font-black text-purple-300 uppercase tracking-wider block mb-1">
+                        KODE ROOM (BAGIKAN KE TEMAN)
                       </span>
-                      <span className="text-[10px] text-slate-400 font-semibold">
-                        {lobbyPlayers.length < 4 ? 'Slot kosong otomatis diisi Bot AI' : 'Room Penuh (4/4)'}
-                      </span>
+                      <div className="flex items-center justify-center space-x-2">
+                        <span className="text-3xl font-black text-white tracking-widest bg-slate-950 px-4 py-1.5 rounded-xl border border-purple-400">
+                          {roomId}
+                        </span>
+                        <button
+                          onClick={handleCopyCode}
+                          className="p-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white shadow transition-all"
+                          title="Salin Kode Room"
+                        >
+                          {copied ? <Check className="w-5 h-5 text-emerald-300" /> : <Copy className="w-5 h-5" />}
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="space-y-2">
-                      {lobbyPlayers.map((lp, idx) => {
-                        const currentSocketId = socketService.socket?.id || myPlayerId;
-                        const isMe = Boolean(
-                          (lp.socketId && currentSocketId && lp.socketId === currentSocketId) ||
-                          (!lp.socketId && lp.isHost === isHost)
-                        );
+                    {/* Connected Players in Room */}
+                    <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                          Pemain di Room ({lobbyPlayers.length}/4)
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-semibold">
+                          {lobbyPlayers.length < 4 ? 'Slot kosong otomatis diisi Bot AI' : 'Room Penuh (4/4)'}
+                        </span>
+                      </div>
 
-                        return (
-                          <div
-                            key={lp.socketId || idx}
-                            className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
-                              isMe
-                                ? 'bg-sky-950/60 border-sky-500/40 shadow-sm ring-1 ring-sky-500/30'
-                                : 'bg-slate-950/80 border-white/10'
-                            }`}
-                          >
-                            <div className="flex items-center space-x-2.5">
-                              <PlayerAvatar avatarId={lp.avatar} size="md" />
-                              <div className="flex items-center space-x-2">
-                                <span className="font-bold text-sm text-white">{lp.name}</span>
-                                {isMe && (
-                                  <span className="text-[9px] font-black text-sky-400 bg-sky-500/20 px-1.5 py-0.5 rounded border border-sky-400/30 uppercase">
-                                    Kamu
-                                  </span>
-                                )}
+                      <div className="space-y-2">
+                        {lobbyPlayers.map((lp, idx) => {
+                          const currentSocketId = socketService.socket?.id || myPlayerId;
+                          const myClientId = typeof window !== 'undefined' ? sessionStorage.getItem('colorrush_client_id') : null;
+                          const isMe = Boolean(
+                            (lp.clientPlayerId && myClientId && lp.clientPlayerId === myClientId) ||
+                            (lp.socketId && currentSocketId && lp.socketId === currentSocketId) ||
+                            (!lp.socketId && lp.name === playerName) ||
+                            (!lp.socketId && lp.isHost === isHost)
+                          );
+
+                          const isLpHost = Boolean(lp.isHost || idx === 0);
+
+                          return (
+                            <div
+                              key={lp.socketId || idx}
+                              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                                isMe
+                                  ? 'bg-sky-950/60 border-sky-500/40 shadow-sm ring-1 ring-sky-500/30'
+                                  : 'bg-slate-950/80 border-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-2.5">
+                                <PlayerAvatar avatarId={lp.avatar} size="md" />
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-bold text-sm text-white">{lp.name}</span>
+                                  {isMe && (
+                                    <span className="text-[9px] font-black text-sky-400 bg-sky-500/20 px-1.5 py-0.5 rounded border border-sky-400/30 uppercase">
+                                      Kamu
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </div>
 
-                            {lp.isHost ? (
-                              <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-black">
-                                <Crown className="w-3 h-3" />
-                                <span>HOST (SLOT 1)</span>
-                              </span>
-                            ) : (
-                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-black">
-                                TERISI (SLOT {idx + 1})
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
+                              {isLpHost ? (
+                                <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-black">
+                                  <Crown className="w-3 h-3" />
+                                  <span>HOST (SLOT 1)</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-black">
+                                  TERISI (SLOT {idx + 1})
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
 
-                      {/* Remaining empty slots indicator */}
-                      {Array.from({ length: Math.max(0, (roomLobby?.maxPlayers || 4) - lobbyPlayers.length) }).map((_, i) => {
-                        const slotNum = lobbyPlayers.length + i + 1;
-                        return (
-                          <div
-                            key={`empty-${i}`}
-                            className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/40 border border-dashed border-white/10 text-slate-500 text-xs"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <Bot className="w-4 h-4 text-slate-500" />
-                              <span className="font-semibold text-[11px]">
-                                Slot {slotNum} (Akan diisi AI Bot atau Teman)
+                        {/* Remaining empty slots indicator */}
+                        {Array.from({ length: Math.max(0, (roomLobby?.maxPlayers || 4) - lobbyPlayers.length) }).map((_, i) => {
+                          const slotNum = lobbyPlayers.length + i + 1;
+                          return (
+                            <div
+                              key={`empty-${i}`}
+                              className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/40 border border-dashed border-white/10 text-slate-500 text-xs"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <Bot className="w-4 h-4 text-slate-500" />
+                                <span className="font-semibold text-[11px]">
+                                  Slot {slotNum} (Akan diisi AI Bot atau Teman)
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-600 uppercase font-mono tracking-wider">
+                                Kosong
                               </span>
                             </div>
-                            <span className="text-[10px] text-slate-600 uppercase font-mono tracking-wider">
-                              Kosong
-                            </span>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
+
+                    {/* Host Start Button vs Guest Waiting Notice */}
+                    {isHost ? (
+                      <div className="space-y-2">
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={handleStartGameClick}
+                          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-[0_0_30px_rgba(16,185,129,0.6)] flex items-center justify-center space-x-2 cursor-pointer"
+                        >
+                          <Play className="w-5 h-5 fill-slate-950" />
+                          <span>MULAI PERMAINAN (START GAME)</span>
+                        </motion.button>
+                        <p className="text-[11px] text-center text-slate-400">
+                          Klik tombol di atas untuk mulai bermain bersama!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-3.5 rounded-2xl bg-slate-950/90 border border-sky-500/30 flex items-center justify-center space-x-2.5 text-center">
+                        <Loader2 className="w-4 h-4 text-sky-400 animate-spin" />
+                        <span className="text-xs font-bold text-sky-300">
+                          Menunggu Host memulai permainan...
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Leave Room Button */}
+                    <button
+                      onClick={leaveRoom}
+                      className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 font-bold text-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Keluar dari Room</span>
+                    </button>
                   </div>
-
-                  {/* Host Start Button vs Guest Waiting Notice */}
-                  {isHost ? (
-                    <div className="space-y-2">
-                      <motion.button
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={handleStartGameClick}
-                        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 font-black text-sm uppercase tracking-wider shadow-[0_0_30px_rgba(16,185,129,0.6)] flex items-center justify-center space-x-2"
-                      >
-                        <Play className="w-5 h-5 fill-slate-950" />
-                        <span>MULAI PERMAINAN (START GAME)</span>
-                      </motion.button>
-                      <p className="text-[11px] text-center text-slate-400">
-                        Klik tombol di atas untuk mulai bermain bersama!
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="p-3.5 rounded-2xl bg-slate-950/90 border border-sky-500/30 flex items-center justify-center space-x-2.5 text-center">
-                      <Loader2 className="w-4 h-4 text-sky-400 animate-spin" />
-                      <span className="text-xs font-bold text-sky-300">
-                        Menunggu Host memulai permainan...
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Leave Room Button */}
-                  <button
-                    onClick={leaveRoom}
-                    className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 font-bold text-xs flex items-center justify-center space-x-1.5 transition-colors"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Keluar dari Room</span>
-                  </button>
-                </div>
+                )
               ) : (
                 /* If Not in Room -> Show Create / Join Form */
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -490,7 +647,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                 }`}
               />
               {roomId
-                ? `Room: ${roomId} (${isHost ? 'Host' : 'Guest'})`
+                ? `Room: ${roomId} (${effectiveIsHost ? 'Host' : 'Guest'})`
                 : 'Mode: Solo vs AI'}
             </span>
           </div>

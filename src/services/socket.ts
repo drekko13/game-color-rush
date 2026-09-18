@@ -83,12 +83,16 @@ class SocketService {
     this.getSocket().emit('get_room_lobby', { roomId });
   }
 
-  public leaveRoom(roomId: string) {
-    this.getSocket().emit('leave_room', { roomId });
+  public leaveRoom(roomId: string, clientPlayerId?: string, isExplicitForfeit: boolean = false) {
+    this.getSocket().emit('leave_room', { roomId, clientPlayerId, isExplicitForfeit });
   }
 
-  public startRoomGame(roomId: string) {
-    this.getSocket().emit('start_room_game', { roomId });
+  public setPlayerAway(roomId: string, isAway: boolean) {
+    this.getSocket().emit('player_away', { roomId, isAway });
+  }
+
+  public startRoomGame(roomId: string, clientPlayerId?: string) {
+    this.getSocket().emit('start_room_game', { roomId, clientPlayerId });
   }
 
   public playCard(roomId: string, cardId: string) {
@@ -113,6 +117,10 @@ class SocketService {
 
   public catchRush(roomId: string, targetPlayerId: string) {
     this.getSocket().emit('catch_rush', { roomId, targetPlayerId });
+  }
+
+  public setRematchReady(roomId: string, ready: boolean) {
+    this.getSocket().emit('set_rematch_ready', { roomId, ready });
   }
 }
 

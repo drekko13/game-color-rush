@@ -110,9 +110,15 @@ export const shuffleDeck = (deck: Card[]): Card[] => {
 export const isValidPlay = (
   card: Card,
   topDiscard: Card | null,
-  activeColor: CardColor | null
+  activeColor: CardColor | null,
+  stackCount: number = 0
 ): boolean => {
   if (!topDiscard) return true;
+
+  // When stack penalty is active, only +2 / +4 can be stacked per official rules
+  if (stackCount > 0) {
+    return isValidStackPlay(card, topDiscard, stackCount);
+  }
 
   if (card.color === 'wild') return true;
 
@@ -125,13 +131,42 @@ export const isValidPlay = (
   return false;
 };
 
+// Official UNO Mobile Stacking Rule (ColorRush):
+// +2 and +4 cards can be stacked. +2 can only be stacked on +2.
+// A player that can't add to the stack must draw the total.
+export const isValidStackPlay = (
+  card: Card,
+  topDiscard: Card | null,
+  stackCount: number
+): boolean => {
+  if (stackCount <= 0 || !topDiscard) return false;
+  if (topDiscard.value === 'BURST_2') {
+    return card.value === 'BURST_2' || card.value === 'INFERNO_4';
+  }
+  if (topDiscard.value === 'INFERNO_4') {
+    return card.value === 'INFERNO_4';
+  }
+  return false;
+};
+
 // AI Decision Helper: Pick best card
 export const chooseBotCard = (
   hand: Card[],
   topDiscard: Card,
-  activeColor: CardColor
+  activeColor: CardColor,
+  stackCount: number = 0
 ): Card | null => {
-  const playableCards = hand.filter((c) => isValidPlay(c, topDiscard, activeColor));
+  // If stack is active, bot must play a stacking card (+2 or +4) or draw the stack
+  if (stackCount > 0) {
+    const stackCards = hand.filter((c) => isValidStackPlay(c, topDiscard, stackCount));
+    if (stackCards.length === 0) return null;
+    // Prefer +2 over +4 if available to save wild +4
+    const burst2 = stackCards.find((c) => c.value === 'BURST_2');
+    if (burst2) return burst2;
+    return stackCards[0];
+  }
+
+  const playableCards = hand.filter((c) => isValidPlay(c, topDiscard, activeColor, 0));
   if (playableCards.length === 0) return null;
 
   const actionCards = playableCards.filter(

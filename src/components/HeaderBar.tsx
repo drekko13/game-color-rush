@@ -33,18 +33,20 @@ export const HeaderBar: React.FC = () => {
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
 
+  const isInRoom = gameMode === 'multiplayer' || Boolean(roomId);
+
   return (
     <>
-      <header className="w-full flex items-center justify-between px-2 md:px-4 py-2 z-30 bg-slate-950/40 backdrop-blur-md border-b border-white/5">
+      <header className="w-full flex items-center justify-between px-3 md:px-4 py-2 z-30 bg-slate-950/40 backdrop-blur-md border-b border-white/5">
         {/* Game Logo & Brand */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 shrink-0">
           <button
             onClick={() => {
               if (window.confirm('Kembali ke Menu Utama?')) {
                 returnToMainMenu();
               }
             }}
-            className="flex items-center space-x-2 text-left group"
+            className="flex items-center space-x-2 text-left group cursor-pointer"
             title="Klik untuk ke Menu Utama"
           >
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-600 via-sky-500 to-amber-500 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.5)] p-0.5 group-hover:scale-105 transition-transform">
@@ -60,59 +62,68 @@ export const HeaderBar: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Toolbar Buttons */}
-        <div className="flex items-center space-x-1.5 md:space-x-2">
-          {/* Home / Menu Utama Button */}
+        {/* Toolbar Buttons: On mobile, ONLY Info Room & Pengaturan are visible. Other secondary buttons are shown on desktop */}
+        <div className="flex items-center space-x-2">
+          {/* Desktop Only: Home / Menu Utama Button */}
           <button
             onClick={() => {
-              if (window.confirm('Kembali ke Menu Utama? Permainan saat ini akan diakhiri.')) {
+              if (
+                window.confirm(
+                  'Kembali ke Menu Utama? Permainan saat ini akan diakhiri.'
+                )
+              ) {
                 returnToMainMenu();
               }
             }}
             title="Kembali ke Menu Utama"
-            className="px-2 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/30 transition-all flex items-center space-x-1 text-xs font-bold shadow"
+            className="hidden md:flex px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/30 transition-all items-center space-x-1.5 text-xs font-bold shadow cursor-pointer"
           >
             <Home className="w-4 h-4" />
-            <span className="hidden md:inline">Menu</span>
+            <span>Menu</span>
           </button>
-          {/* Multiplayer Lobby Button */}
+
+          {/* ESSENTIAL: Info Room / Multiplayer Button (Visible on Mobile & Desktop) */}
           <button
             onClick={() => setIsMultiplayerOpen(true)}
-            title="Multiplayer Online Lobby"
-            className={`p-1.5 md:px-3 md:py-1.5 rounded-xl transition-all flex items-center space-x-1.5 text-xs font-black shadow-md ${
-              gameMode === 'multiplayer'
+            title="Informasi Room & Pemain"
+            className={`px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1.5 text-xs font-black shadow-md cursor-pointer ${
+              isInRoom
                 ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white border border-sky-400/50 shadow-[0_0_15px_rgba(2,132,199,0.5)]'
                 : 'bg-slate-900 hover:bg-slate-800 text-sky-400 border border-sky-500/30'
             }`}
           >
             <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">
-              {gameMode === 'multiplayer' ? `Room ${roomId || '...'}` : 'Multiplayer'}
+            <span>
+              {isInRoom ? `Room ${roomId || '...'}` : 'Info Room'}
             </span>
-            {gameMode === 'multiplayer' && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            {isInRoom && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
             )}
           </button>
 
-          {/* Party Drink Mode Toggle */}
+          {/* Desktop Only: Party Drink Mode Toggle */}
           <button
             onClick={togglePartyDrinkPenalty}
-            title={partyDrinkPenaltyEnabled ? 'Party Drink Penalty: ON' : 'Party Drink Penalty: OFF'}
-            className={`p-1.5 md:p-2 rounded-xl transition-all flex items-center space-x-1 text-xs font-bold ${
+            title={
+              partyDrinkPenaltyEnabled
+                ? 'Party Drink Penalty: ON'
+                : 'Party Drink Penalty: OFF'
+            }
+            className={`hidden md:flex p-2 rounded-xl transition-all items-center space-x-1.5 text-xs font-bold cursor-pointer ${
               partyDrinkPenaltyEnabled
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
                 : 'bg-slate-900 text-slate-500 border border-slate-800'
             }`}
           >
             <Beer className="w-4 h-4" />
-            <span className="hidden sm:inline">Party Mode</span>
+            <span>Party Mode</span>
           </button>
 
-          {/* Sound Toggle */}
+          {/* Desktop Only: Sound Toggle */}
           <button
             onClick={toggleSound}
             title={soundMuted ? 'Unmute Audio' : 'Mute Audio'}
-            className="p-1.5 md:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors"
+            className="hidden md:flex p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors cursor-pointer"
           >
             {soundMuted ? (
               <VolumeX className="w-4 h-4 text-rose-400" />
@@ -121,49 +132,60 @@ export const HeaderBar: React.FC = () => {
             )}
           </button>
 
-          {/* Game Logs Button */}
+          {/* Desktop Only: Game Logs Button */}
           <button
             onClick={() => setIsLogsOpen(true)}
-            title="Action Log"
-            className="p-1.5 md:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors"
+            title="Riwayat Log Permainan"
+            className="hidden md:flex p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors cursor-pointer"
           >
             <ScrollText className="w-4 h-4" />
           </button>
 
-          {/* How to Play Rules */}
+          {/* Desktop Only: How to Play Rules */}
           <button
             onClick={() => setIsRulesOpen(true)}
-            title="Rules & Suits"
-            className="p-1.5 md:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors"
+            title="Aturan Main & Panduan"
+            className="hidden md:flex p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors cursor-pointer"
           >
             <HelpCircle className="w-4 h-4" />
           </button>
 
-          {/* Settings */}
+          {/* Desktop Only: Restart Match */}
+          {!isInRoom && (
+            <button
+              onClick={initGame}
+              title="Restart Match"
+              className="hidden md:flex p-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-bold transition-all shadow-md cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* ESSENTIAL: Pengaturan / Settings Button (Visible on Mobile & Desktop) */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            title="Settings"
-            className="p-1.5 md:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors"
+            title="Pengaturan Game (Audio, Party Mode, AI Speed, Keluar Room)"
+            className="px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-white/10 hover:border-white/25 transition-all flex items-center space-x-1.5 text-xs font-bold shadow cursor-pointer"
           >
-            <Settings className="w-4 h-4" />
-          </button>
-
-          {/* Restart Match */}
-          <button
-            onClick={initGame}
-            title="Restart Match"
-            className="p-1.5 md:p-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-bold transition-all shadow-md"
-          >
-            <RotateCcw className="w-4 h-4" />
+            <Settings className="w-4 h-4 text-sky-400" />
+            <span className="hidden sm:inline">Pengaturan</span>
           </button>
         </div>
       </header>
 
       {/* Modals */}
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onOpenRules={() => setIsRulesOpen(true)}
+        onOpenLogs={() => setIsLogsOpen(true)}
+      />
       <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
       <LogDrawer isOpen={isLogsOpen} onClose={() => setIsLogsOpen(false)} />
-      <MultiplayerModal isOpen={isMultiplayerOpen} onClose={() => setIsMultiplayerOpen(false)} />
+      <MultiplayerModal
+        isOpen={isMultiplayerOpen}
+        onClose={() => setIsMultiplayerOpen(false)}
+      />
     </>
   );
 };

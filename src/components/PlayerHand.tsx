@@ -5,7 +5,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { CardComponent } from './Card';
 import { isValidPlay } from '../game/deck';
 import type { Card } from '../types/game';
-import { Zap, PlusCircle, ArrowRightCircle } from 'lucide-react';
+import { Zap, PlusCircle } from 'lucide-react';
 
 export const PlayerHand: React.FC = () => {
   const isMobile = useIsMobile(768);
@@ -16,12 +16,12 @@ export const PlayerHand: React.FC = () => {
     activeColor,
     playCard,
     drawCard,
-    passTurn,
     callRush,
     hasPlayerDrawnThisTurn,
     drawnCardId,
     gamePhase,
     myPlayerId,
+    stackCount,
   } = useGameStore();
 
   const humanPlayer =
@@ -40,13 +40,14 @@ export const PlayerHand: React.FC = () => {
   const hand = humanPlayer.hand;
 
   // Official UNO playability check:
+  // If stack is active, only stacking cards (+2 or +4) are playable!
   // If player drew a card this turn, only that newly drawn card can be played (if valid)!
   const isCardPlayable = (card: Card) => {
     if (!isMyTurn || gamePhase !== 'playing') return false;
     if (hasPlayerDrawnThisTurn) {
-      return card.id === drawnCardId && isValidPlay(card, topDiscard, activeColor);
+      return card.id === drawnCardId && isValidPlay(card, topDiscard, activeColor, stackCount);
     }
-    return isValidPlay(card, topDiscard, activeColor);
+    return isValidPlay(card, topDiscard, activeColor, stackCount);
   };
 
   const hasPlayableCard = hand.some((c) => isCardPlayable(c));
@@ -97,23 +98,17 @@ export const PlayerHand: React.FC = () => {
         {/* Draw / Pass Controls */}
         {isMyTurn && gamePhase === 'playing' && (
           <div className="flex items-center space-x-1.5 md:space-x-2">
-            {!hasPlayerDrawnThisTurn ? (
-              <button
-                onClick={() => drawCard(humanPlayer.id)}
-                className="flex items-center space-x-1 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-[11px] md:text-sm font-bold shadow-md transition-all cursor-pointer"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>Draw Card (1)</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => passTurn(humanPlayer.id)}
-                className="flex items-center space-x-1 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-100 text-[11px] md:text-sm font-bold shadow-md transition-all cursor-pointer"
-              >
-                <ArrowRightCircle className="w-3.5 h-3.5 text-amber-400" />
-                <span>Pass Turn</span>
-              </button>
-            )}
+            <button
+              onClick={() => drawCard(humanPlayer.id)}
+              className={`flex items-center space-x-1 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full text-white text-[11px] md:text-sm font-bold shadow-md transition-all cursor-pointer ${
+                stackCount > 0
+                  ? 'bg-gradient-to-r from-rose-600 via-red-500 to-amber-600 hover:brightness-110 shadow-[0_0_20px_rgba(225,29,72,0.6)] animate-pulse'
+                  : 'bg-sky-600 hover:bg-sky-500'
+              }`}
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>{stackCount > 0 ? `Ambil +${stackCount} Kartu (Stack)` : 'Draw Card (1)'}</span>
+            </button>
           </div>
         )}
       </div>
@@ -145,6 +140,8 @@ export const PlayerHand: React.FC = () => {
                   <CardComponent
                     card={card}
                     isPlayable={playable}
+                    enableDrag={true}
+                    disableHover={false}
                     onClick={() => {
                       if (playable) {
                         playCard(humanPlayer.id, card.id);
@@ -171,6 +168,8 @@ export const PlayerHand: React.FC = () => {
                 <CardComponent
                   card={card}
                   isPlayable={playable}
+                  enableDrag={false}
+                  disableHover={true}
                   onClick={() => {
                     if (playable) {
                       playCard(humanPlayer.id, card.id);
@@ -185,19 +184,14 @@ export const PlayerHand: React.FC = () => {
       )}
 
       {/* Turn Helper Prompt */}
-      {isMyTurn && !hasPlayableCard && !hasPlayerDrawnThisTurn && (
+      {isMyTurn && stackCount > 0 && (
+        <div className="mt-0.5 text-[10px] md:text-[11px] text-rose-400 font-bold animate-pulse">
+          🔥 Tumpukan penalti +{stackCount} kartu aktif! Tumpuk kartu +2 / +4 atau klik &quot;Ambil Kartu&quot; untuk menerima penalti.
+        </div>
+      )}
+      {isMyTurn && stackCount === 0 && !hasPlayableCard && (
         <div className="mt-0.5 text-[10px] md:text-[11px] text-sky-400 font-semibold animate-pulse">
-          Tidak ada kartu cocok! Ambil 1 kartu dari deck atau tombol Draw Card.
-        </div>
-      )}
-      {isMyTurn && hasPlayerDrawnThisTurn && !hasPlayableCard && (
-        <div className="mt-0.5 text-[10px] md:text-[11px] text-amber-300 font-semibold">
-          Kartu yang ditarik tidak cocok. Klik Pass Turn untuk melanjutkan giliran.
-        </div>
-      )}
-      {isMyTurn && hasPlayerDrawnThisTurn && hasPlayableCard && (
-        <div className="mt-0.5 text-[10px] md:text-[11px] text-emerald-400 font-semibold animate-pulse">
-          Kartu yang ditarik cocok! Klik kartu untuk memainkannya, atau Pass Turn.
+          Tidak ada kartu cocok! Ambil 1 kartu (Aturan Force Play: kartu cocok langsung dimainkan otomatis).
         </div>
       )}
     </div>

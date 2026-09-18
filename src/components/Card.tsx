@@ -13,6 +13,7 @@ interface CardProps {
   rotation?: number;
   className?: string;
   disableHover?: boolean;
+  enableDrag?: boolean;
 }
 
 export const CardComponent: React.FC<CardProps> = ({
@@ -25,7 +26,13 @@ export const CardComponent: React.FC<CardProps> = ({
   rotation = 0,
   className = '',
   disableHover = false,
+  enableDrag = false,
 }) => {
+  // Automatically disable hover translation on touchscreens to prevent cards sticking in mid-air
+  const isTouchDevice =
+    typeof window !== 'undefined' &&
+    ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  const shouldDisableHover = disableHover || isTouchDevice;
   // Color gradient mappings
   const getColorGradient = (color: CardColorWithWild) => {
     switch (color) {
@@ -166,7 +173,8 @@ export const CardComponent: React.FC<CardProps> = ({
 
   return (
     <motion.div
-      drag={isPlayable ? 'y' : false}
+      drag={enableDrag && isPlayable ? 'y' : false}
+      dragSnapToOrigin={true}
       dragConstraints={{ top: -140, bottom: 0 }}
       dragElastic={0.2}
       onDragEnd={(_, info) => {
@@ -177,11 +185,11 @@ export const CardComponent: React.FC<CardProps> = ({
         }
       }}
       whileHover={
-        !disableHover && isPlayable
+        !shouldDisableHover && isPlayable
           ? { scale: 1.08, y: -14, transition: { duration: 0.15 } }
           : undefined
       }
-      whileTap={isPlayable ? { scale: 0.96 } : undefined}
+      whileTap={isPlayable ? { scale: 0.95 } : undefined}
       onClick={isPlayable ? onClick : undefined}
       style={{ transform: `rotate(${rotation}deg)`, willChange: 'transform' }}
       className={`relative ${sizeStyles[size]} bg-gradient-to-br ${getColorGradient(

@@ -13,6 +13,7 @@ import { MissileCards } from './components/MissileCards';
 import { VictoryModal } from './components/VictoryModal';
 import { RushQuickTimePrompt } from './components/RushQuickTimePrompt';
 import { WildDraw4ChallengeModal } from './components/WildDraw4ChallengeModal';
+import { socketService } from './services/socket';
 
 export const App: React.FC = () => {
   const { currentScreen, players, screenShake, initMultiplayerSocket } = useGameStore();
@@ -21,6 +22,23 @@ export const App: React.FC = () => {
   useEffect(() => {
     initMultiplayerSocket();
   }, [initMultiplayerSocket]);
+
+  // Handle Tab Switch (isAway / Menunggu)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const state = useGameStore.getState();
+      if (state.roomId && state.gameMode === 'multiplayer' && state.currentScreen === 'game') {
+        const isHidden = document.visibilityState === 'hidden';
+        socketService.setPlayerAway(state.roomId, isHidden);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // If on Main Menu or in Room Lobby, render MainMenuScreen (with MultiplayerModal overlay if in lobby)
   if (currentScreen === 'menu' || currentScreen === 'lobby') {

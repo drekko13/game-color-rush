@@ -16,10 +16,16 @@ export const TableCenter: React.FC = () => {
     drawCard,
     gamePhase,
     penaltyState,
+    stackCount,
+    myPlayerId,
   } = useGameStore();
 
+  const humanPlayer =
+    players.find((p) => (myPlayerId ? p.id === myPlayerId : !p.isBot)) ||
+    players.find((p) => p.position === 'bottom') ||
+    players[0];
   const currentPlayer = players[currentTurnIndex];
-  const isHumanTurn = currentPlayer && !currentPlayer.isBot;
+  const isMyTurn = Boolean(currentPlayer && humanPlayer && currentPlayer.id === humanPlayer.id);
   const topDiscard = discardPile[discardPile.length - 1];
 
   const isPenaltyPulse = penaltyState !== null;
@@ -58,36 +64,50 @@ export const TableCenter: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Active Color Beacon & Direction Badge */}
-      <div className="z-10 flex items-center space-x-2 md:space-x-3 mb-2 md:mb-4 px-3 py-1 md:py-1.5 rounded-full bg-slate-900/85 border border-white/15 backdrop-blur-md shadow-lg">
-        <div className="flex items-center space-x-1.5 md:space-x-2">
-          <span
-            className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full shadow-[0_0_10px]"
-            style={{
-              backgroundColor: COLOR_HEX[activeColor].bg,
-              boxShadow: `0 0 12px ${COLOR_HEX[activeColor].bg}`,
-            }}
-          />
-          <span className="text-[11px] md:text-sm font-bold tracking-wide text-white">
-            {SUIT_NAMES[activeColor]}
-          </span>
+      {/* Active Color Beacon, Direction Badge & Stack Penalty Badge */}
+      <div className="z-10 flex flex-wrap items-center justify-center gap-2 mb-2 md:mb-4">
+        <div className="flex items-center space-x-2 md:space-x-3 px-3 py-1 md:py-1.5 rounded-full bg-slate-900/85 border border-white/15 backdrop-blur-md shadow-lg">
+          <div className="flex items-center space-x-1.5 md:space-x-2">
+            <span
+              className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full shadow-[0_0_10px]"
+              style={{
+                backgroundColor: COLOR_HEX[activeColor].bg,
+                boxShadow: `0 0 12px ${COLOR_HEX[activeColor].bg}`,
+              }}
+            />
+            <span className="text-[11px] md:text-sm font-bold tracking-wide text-white">
+              {SUIT_NAMES[activeColor]}
+            </span>
+          </div>
+
+          <div className="w-px h-3.5 md:h-4 bg-white/20" />
+
+          <div className="flex items-center space-x-1 text-slate-300 text-[11px] md:text-xs font-semibold">
+            {turnDirection === 'clockwise' ? (
+              <>
+                <RotateCw className="w-3 h-3 md:w-3.5 md:h-3.5 text-sky-400 animate-spin-slow" />
+                <span className="hidden sm:inline">Clockwise</span>
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-3 h-3 md:w-3.5 md:h-3.5 text-pink-400 animate-spin-slow" />
+                <span className="hidden sm:inline">Counter-CW</span>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="w-px h-3.5 md:h-4 bg-white/20" />
-
-        <div className="flex items-center space-x-1 text-slate-300 text-[11px] md:text-xs font-semibold">
-          {turnDirection === 'clockwise' ? (
-            <>
-              <RotateCw className="w-3 h-3 md:w-3.5 md:h-3.5 text-sky-400 animate-spin-slow" />
-              <span className="hidden sm:inline">Clockwise</span>
-            </>
-          ) : (
-            <>
-              <RotateCcw className="w-3 h-3 md:w-3.5 md:h-3.5 text-pink-400 animate-spin-slow" />
-              <span className="hidden sm:inline">Counter-CW</span>
-            </>
-          )}
-        </div>
+        {/* Dynamic Stack Counter Badge */}
+        {stackCount > 0 && (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: [1, 1.06, 1], opacity: 1 }}
+            transition={{ repeat: Infinity, duration: 1.2 }}
+            className="flex items-center space-x-1.5 px-3 py-1 md:py-1.5 rounded-full bg-gradient-to-r from-rose-600 to-amber-600 border border-rose-400 text-white font-black text-[11px] md:text-xs tracking-wider shadow-[0_0_20px_rgba(225,29,72,0.7)]"
+          >
+            <span>🔥 STACK PENALTI: +{stackCount} KARTU!</span>
+          </motion.div>
+        )}
       </div>
 
       {/* Center Table: Draw Deck + Discard Pile */}
@@ -95,17 +115,19 @@ export const TableCenter: React.FC = () => {
         {/* Draw Deck (Tap to Draw) */}
         <div className="relative flex flex-col items-center">
           <motion.div
-            whileHover={isHumanTurn ? { scale: 1.05 } : undefined}
-            whileTap={isHumanTurn ? { scale: 0.94 } : undefined}
+            whileHover={isMyTurn && gamePhase === 'playing' ? { scale: 1.05 } : undefined}
+            whileTap={isMyTurn && gamePhase === 'playing' ? { scale: 0.94 } : undefined}
             onClick={() => {
-              if (isHumanTurn && gamePhase === 'playing') {
-                drawCard(currentPlayer.id);
+              if (isMyTurn && gamePhase === 'playing' && humanPlayer) {
+                drawCard(humanPlayer.id);
               }
             }}
-            className={`relative cursor-pointer min-w-[68px] min-h-[96px] ${
-              isHumanTurn
-                ? 'ring-2 ring-sky-400/80 ring-offset-2 ring-offset-slate-900 rounded-xl'
-                : ''
+            className={`relative min-w-[68px] min-h-[96px] transition-all ${
+              isMyTurn
+                ? stackCount > 0
+                  ? 'cursor-pointer ring-4 ring-rose-500 ring-offset-2 ring-offset-slate-900 rounded-xl shadow-[0_0_30px_rgba(225,29,72,0.9)] animate-pulse'
+                  : 'cursor-pointer ring-2 ring-sky-400 ring-offset-2 ring-offset-slate-900 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.7)] animate-pulse'
+                : 'cursor-not-allowed opacity-75'
             }`}
           >
             {/* Realistic Stack Depth */}
@@ -133,8 +155,18 @@ export const TableCenter: React.FC = () => {
             </div>
           </motion.div>
 
-          <span className="text-[10px] md:text-[11px] font-semibold text-slate-400 mt-2.5">
-            {isHumanTurn ? 'Tap to Draw' : 'Draw Deck'}
+          <span className={`text-[10px] md:text-[11px] font-semibold mt-2.5 ${
+            isMyTurn
+              ? stackCount > 0
+                ? 'text-rose-400 font-bold animate-pulse'
+                : 'text-sky-300 font-bold'
+              : 'text-slate-500'
+          }`}>
+            {isMyTurn
+              ? stackCount > 0
+                ? `Ambil +${stackCount} Kartu (Stack)`
+                : '👉 Ambil Kartu'
+              : 'Deck Kartu'}
           </span>
         </div>
 
@@ -201,20 +233,36 @@ export const TableCenter: React.FC = () => {
       {/* Turn Notification Bar */}
       <div className="z-10 mt-2 md:mt-3 text-center">
         {currentPlayer && (
-          <div
-            className={`inline-flex items-center space-x-1.5 md:space-x-2 px-3 py-1 rounded-full text-xs md:text-sm font-semibold transition-all ${
-              isHumanTurn
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse'
-                : 'bg-slate-800/80 text-slate-300 border border-slate-700'
-            }`}
-          >
-            <span className="text-sm md:text-base">{currentPlayer.avatar}</span>
-            <span>
-              {isHumanTurn
-                ? 'Your Turn! Play a card or draw.'
-                : `${currentPlayer.name} is thinking...`}
-            </span>
-          </div>
+          isMyTurn ? (
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: [1, 1.03, 1] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="inline-flex items-center space-x-2 px-4 py-1.5 md:py-2 rounded-full bg-gradient-to-r from-emerald-600/35 via-teal-500/25 to-emerald-600/35 border-2 border-emerald-400 text-white font-black text-xs md:text-sm shadow-[0_0_25px_rgba(16,185,129,0.7)] backdrop-blur-md"
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+              <span className="text-emerald-300 tracking-wider">🎯 GILIRAN KAMU!</span>
+              <span className="text-slate-200 font-medium text-[11px] md:text-xs hidden sm:inline">
+                {stackCount > 0
+                  ? `(Tumpuk +2/+4 atau ambil +${stackCount})`
+                  : 'Keluarkan kartu cocok atau ambil dari deck'}
+              </span>
+            </motion.div>
+          ) : (
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1 md:py-1.5 rounded-full bg-slate-900/90 border border-amber-400/50 text-slate-200 text-xs md:text-sm font-semibold shadow-md backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+              <span className="text-amber-300 font-bold tracking-wide">
+                ⏳ GILIRAN: {currentPlayer.name}
+              </span>
+              <span className="text-slate-400 text-[10px] md:text-xs">
+                {currentPlayer.isDisconnected
+                  ? '(Sedang beralih tab...)'
+                  : currentPlayer.isBot
+                  ? 'sedang berpikir...'
+                  : 'harus mengeluarkan kartu...'}
+              </span>
+            </div>
+          )
         )}
       </div>
     </div>
