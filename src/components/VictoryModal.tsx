@@ -9,6 +9,9 @@ export const VictoryModal: React.FC = () => {
   const {
     gamePhase,
     winner,
+    matchWinner,
+    targetScore,
+    roundScores,
     players,
     initGame,
     gameMode,
@@ -107,24 +110,32 @@ export const VictoryModal: React.FC = () => {
                 : 'bg-gradient-to-r from-rose-400 via-red-300 to-rose-400'
             }`}
           >
-            {isMeWinner ? 'KAMU MENANG!' : 'KAMU KALAH'}
+            {matchWinner
+              ? matchWinner.id === myPlayer?.id
+                ? '🏆 JUARA MATCH 500 POIN!'
+                : `${matchWinner.name} JUARA MATCH!`
+              : isMeWinner
+              ? 'KAMU MENANG RONDE!'
+              : 'KAMU KALAH RONDE'}
           </h2>
 
-          {/* Subtitle */}
+          {/* Subtitle with Official Score Summary */}
           <p className="text-xs md:text-sm text-slate-300 mt-1 mb-5 leading-relaxed">
             {isMeWinner
-              ? 'Eksekusi sempurna! Kamu berhasil menghabiskan seluruh kartumu lebih dulu dan menjuarai match ini.'
-              : `${winner.name} berhasil menghabiskan kartu lebih dulu. Tetap semangat, coba lagi di match berikutnya!`}
+              ? `Kamu berhasil menghabiskan kartu lebih dulu dan mengumpulkan +${winner.roundScore || 0} Poin UNO dari kartu lawan!`
+              : `${winner.name} berhasil menghabiskan kartu lebih dulu (+${winner.roundScore || 0} Poin UNO).`}
           </p>
 
-          {/* Final Standings Table */}
+          {/* Final Standings Table with Official Points */}
           <div className="space-y-2 mb-6 text-left">
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">
-              Final Standings
-            </span>
+            <div className="flex items-center justify-between text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1 px-1">
+              <span>Standings & UNO Points</span>
+              <span>Target: {targetScore} Pts</span>
+            </div>
             {sortedPlayers.map((p) => {
               const isPWinner = p.id === winner.id;
               const isMe = myPlayer && p.id === myPlayer.id;
+              const ptsFromHand = roundScores[p.id] || 0;
 
               return (
                 <div
@@ -148,7 +159,9 @@ export const VictoryModal: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-slate-400">{p.personality}</span>
+                      <span className="text-[10px] text-slate-400">
+                        Total Skor: <strong className="text-white">{p.matchScore} pts</strong>
+                      </span>
                     </div>
                   </div>
 
@@ -159,17 +172,18 @@ export const VictoryModal: React.FC = () => {
                         {p.drinkPenaltyCount}
                       </span>
                     )}
-                    <span className="font-extrabold">
+                    <div className="text-right">
                       {isPWinner ? (
-                        <span className="flex items-center text-amber-300">
-                          <Trophy className="w-3.5 h-3.5 mr-1 fill-amber-300" /> WINNER
-                        </span>
-                      ) : isMe ? (
-                        <span className="text-rose-400 font-bold">{p.hand.length} Cards (Kalah)</span>
+                        <div className="flex items-center text-amber-300 font-black">
+                          <Trophy className="w-3.5 h-3.5 mr-1 fill-amber-300" />
+                          <span>+{winner.roundScore || 0} Pts</span>
+                        </div>
                       ) : (
-                        <span className="text-slate-400">{p.hand.length} Cards</span>
+                        <span className="text-slate-400 font-semibold block">
+                          {p.hand.length} Kartu ({ptsFromHand} pts)
+                        </span>
                       )}
-                    </span>
+                    </div>
                   </div>
                 </div>
               );

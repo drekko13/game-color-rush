@@ -4,6 +4,7 @@ import { useGameStore } from '../store/useGameStore';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { CardComponent } from './Card';
 import { isValidPlay } from '../game/deck';
+import type { Card } from '../types/game';
 import { Zap, PlusCircle, ArrowRightCircle } from 'lucide-react';
 
 export const PlayerHand: React.FC = () => {
@@ -18,6 +19,7 @@ export const PlayerHand: React.FC = () => {
     passTurn,
     callRush,
     hasPlayerDrawnThisTurn,
+    drawnCardId,
     gamePhase,
     myPlayerId,
   } = useGameStore();
@@ -36,7 +38,18 @@ export const PlayerHand: React.FC = () => {
   if (!humanPlayer) return null;
 
   const hand = humanPlayer.hand;
-  const hasPlayableCard = hand.some((c) => isValidPlay(c, topDiscard, activeColor));
+
+  // Official UNO playability check:
+  // If player drew a card this turn, only that newly drawn card can be played (if valid)!
+  const isCardPlayable = (card: Card) => {
+    if (!isMyTurn || gamePhase !== 'playing') return false;
+    if (hasPlayerDrawnThisTurn) {
+      return card.id === drawnCardId && isValidPlay(card, topDiscard, activeColor);
+    }
+    return isValidPlay(card, topDiscard, activeColor);
+  };
+
+  const hasPlayableCard = hand.some((c) => isCardPlayable(c));
 
   // Determine fan angle based on index and hand length
   const getFanRotation = (index: number, total: number) => {
@@ -72,7 +85,7 @@ export const PlayerHand: React.FC = () => {
             }`}
           >
             <Zap className={`w-3.5 h-3.5 md:w-4 md:h-4 ${hand.length <= 2 ? 'text-yellow-200 fill-yellow-200' : ''}`} />
-            <span>{humanPlayer.hasCalledRush ? 'RUSH CALLED!' : 'SHOUT RUSH!'}</span>
+            <span>{humanPlayer.hasCalledRush ? 'UNO CALLED!' : 'SHOUT UNO!'}</span>
           </motion.button>
 
           {/* Cards Count Badge */}
@@ -87,15 +100,15 @@ export const PlayerHand: React.FC = () => {
             {!hasPlayerDrawnThisTurn ? (
               <button
                 onClick={() => drawCard(humanPlayer.id)}
-                className="flex items-center space-x-1 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-[11px] md:text-sm font-bold shadow-md transition-all"
+                className="flex items-center space-x-1 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-[11px] md:text-sm font-bold shadow-md transition-all cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>Draw Card</span>
+                <span>Draw Card (1)</span>
               </button>
             ) : (
               <button
                 onClick={() => passTurn(humanPlayer.id)}
-                className="flex items-center space-x-1 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-100 text-[11px] md:text-sm font-bold shadow-md transition-all"
+                className="flex items-center space-x-1 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-100 text-[11px] md:text-sm font-bold shadow-md transition-all cursor-pointer"
               >
                 <ArrowRightCircle className="w-3.5 h-3.5 text-amber-400" />
                 <span>Pass Turn</span>
@@ -110,7 +123,7 @@ export const PlayerHand: React.FC = () => {
         <div className="flex items-end justify-center w-full max-w-5xl h-44 px-8 relative">
           <div className="flex items-end justify-center -space-x-8 lg:-space-x-7 pt-4">
             {hand.map((card, index) => {
-              const playable = isMyTurn && gamePhase === 'playing' && isValidPlay(card, topDiscard, activeColor);
+              const playable = isCardPlayable(card);
               const rotation = getFanRotation(index, hand.length);
               const translateY = getFanTranslateY(index, hand.length);
 
@@ -151,7 +164,7 @@ export const PlayerHand: React.FC = () => {
           className="flex w-full overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 px-3 items-center space-x-2.5 min-h-[145px]"
         >
           {hand.map((card) => {
-            const playable = isMyTurn && gamePhase === 'playing' && isValidPlay(card, topDiscard, activeColor);
+            const playable = isCardPlayable(card);
 
             return (
               <div key={card.id} className="snap-center shrink-0">
@@ -174,7 +187,17 @@ export const PlayerHand: React.FC = () => {
       {/* Turn Helper Prompt */}
       {isMyTurn && !hasPlayableCard && !hasPlayerDrawnThisTurn && (
         <div className="mt-0.5 text-[10px] md:text-[11px] text-sky-400 font-semibold animate-pulse">
-          No matching card! Tap deck or Draw button.
+          Tidak ada kartu cocok! Ambil 1 kartu dari deck atau tombol Draw Card.
+        </div>
+      )}
+      {isMyTurn && hasPlayerDrawnThisTurn && !hasPlayableCard && (
+        <div className="mt-0.5 text-[10px] md:text-[11px] text-amber-300 font-semibold">
+          Kartu yang ditarik tidak cocok. Klik Pass Turn untuk melanjutkan giliran.
+        </div>
+      )}
+      {isMyTurn && hasPlayerDrawnThisTurn && hasPlayableCard && (
+        <div className="mt-0.5 text-[10px] md:text-[11px] text-emerald-400 font-semibold animate-pulse">
+          Kartu yang ditarik cocok! Klik kartu untuk memainkannya, atau Pass Turn.
         </div>
       )}
     </div>

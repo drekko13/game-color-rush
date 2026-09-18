@@ -12,6 +12,7 @@ import { DrinkPenaltyOverlay } from './components/DrinkPenaltyOverlay';
 import { MissileCards } from './components/MissileCards';
 import { VictoryModal } from './components/VictoryModal';
 import { RushQuickTimePrompt } from './components/RushQuickTimePrompt';
+import { WildDraw4ChallengeModal } from './components/WildDraw4ChallengeModal';
 
 export const App: React.FC = () => {
   const { currentScreen, players, screenShake, initMultiplayerSocket } = useGameStore();
@@ -109,6 +110,7 @@ export const App: React.FC = () => {
       <DrinkPenaltyOverlay />
       <MissileCards />
       <RushQuickTimePrompt />
+      <WildDraw4ChallengeModal />
       <VictoryModal />
     </div>
   );

@@ -204,10 +204,21 @@ function initGameInRoom(room) {
     }
   }
 
-  // Find first non-wild card
-  let discardIdx = deck.findIndex((c) => c.color !== 'wild');
-  if (discardIdx === -1) discardIdx = 0;
-  const [initialCard] = deck.splice(discardIdx, 1);
+  // Official UNO (unorules.com): Wild Draw 4 cannot be the starting card.
+  let initialCard = null;
+  while (!initialCard) {
+    const cand = deck.pop();
+    if (!cand) break;
+    if (cand.value === 'INFERNO_4') {
+      deck.unshift(cand);
+      deck = shuffleDeck(deck);
+    } else {
+      initialCard = cand;
+    }
+  }
+  if (!initialCard) {
+    initialCard = { id: 'initial-card-fallback', color: 'crimson', value: '7', label: '7', type: 'number', scoreValue: 7 };
+  }
 
   const discardPile = [
     {
@@ -218,15 +229,34 @@ function initGameInRoom(room) {
     },
   ];
 
-  const activeColor = initialCard.color === 'wild' ? 'crimson' : initialCard.color;
+  let activeColor = initialCard.color === 'wild' ? 'crimson' : initialCard.color;
+  let turnDirection = 'clockwise';
+  let currentTurnIndex = 0;
+  let gamePhase = 'playing';
+
+  // First card action effects
+  if (initialCard.value === 'SPECTRUM') {
+    gamePhase = 'color_picker';
+  } else if (initialCard.value === 'BURST_2') {
+    for (let k = 0; k < 2; k++) {
+      const c = deck.pop();
+      if (c) players[0].hand.push(c);
+    }
+    currentTurnIndex = 1;
+  } else if (initialCard.value === 'HALT') {
+    currentTurnIndex = 1;
+  } else if (initialCard.value === 'REWIND') {
+    turnDirection = 'counter-clockwise';
+    currentTurnIndex = players.length - 1;
+  }
 
   room.deck = deck;
   room.discardPile = discardPile;
   room.activeColor = activeColor;
-  room.turnDirection = 'clockwise';
+  room.turnDirection = turnDirection;
   room.players = players;
-  room.currentTurnIndex = 0;
-  room.gamePhase = 'playing';
+  room.currentTurnIndex = currentTurnIndex;
+  room.gamePhase = gamePhase;
   room.winner = null;
   room.rushDuel = null;
   room.status = 'playing';
@@ -528,7 +558,7 @@ function serverInflictPenalty(room, targetPlayerId, count, type) {
 function serverCatchRush(room, targetPlayerId) {
   if (room.rushTimeout) clearTimeout(room.rushTimeout);
   room.rushDuel = null;
-  serverInflictPenalty(room, targetPlayerId, 1, 'rush_penalty');
+  serverInflictPenalty(room, targetPlayerId, 2, 'rush_penalty');
 }
 
 // Broadcast total live online connected users

@@ -11,12 +11,15 @@ import type {
   PlayerPosition,
   RushDuelState,
   TurnDirection,
+  UnoChallengeState,
 } from '../types/game';
 import {
+  calculateHandScore,
   chooseBotCard,
   chooseBotColor,
   createFullDeck,
   isValidPlay,
+  shouldBotChallengeWildDraw4,
   shuffleDeck,
 } from '../game/deck';
 import { soundFx } from '../audio/soundEffects';
@@ -31,6 +34,11 @@ interface GameState {
   currentTurnIndex: number;
   gamePhase: GamePhase;
   winner: Player | null;
+
+  // Official Uno Scoring (500 pts target)
+  targetScore: number;
+  matchWinner: Player | null;
+  roundScores: Record<string, number>;
 
   // Screen & Navigation
   currentScreen: import('../types/game').ScreenView;
@@ -67,6 +75,7 @@ interface GameState {
   drawnCardId: string | null;
   rushCallGracePlayerId: string | null;
   rushDuel: RushDuelState | null;
+  challengeState: UnoChallengeState | null;
 
   // Settings
   partyDrinkPenaltyEnabled: boolean;
@@ -80,6 +89,7 @@ interface GameState {
   drawCard: (playerId: string) => void;
   passTurn: (playerId: string) => void;
   selectWildColor: (color: CardColor) => void;
+  respondToChallenge: (acceptPenalty: boolean) => void;
   callRush: (playerId: string) => void;
   catchUncalledRush: (targetPlayerId: string) => void;
   togglePartyDrinkPenalty: () => void;
@@ -92,7 +102,7 @@ interface GameState {
     sourcePlayerId: string,
     targetPlayerId: string,
     count: number,
-    type: 'burst_2' | 'inferno_4' | 'rush_penalty'
+    type: 'burst_2' | 'inferno_4' | 'rush_penalty' | 'challenge_penalty' | 'challenge_failed'
   ) => void;
   triggerBotTurn: (botIndex: number) => void;
 
@@ -118,6 +128,7 @@ const INITIAL_PLAYERS: Omit<Player, 'hand'>[] = [
     position: 'bottom',
     hasCalledRush: false,
     drinkPenaltyCount: 0,
+    matchScore: 0,
   },
   {
     id: 'p-1',
@@ -128,6 +139,7 @@ const INITIAL_PLAYERS: Omit<Player, 'hand'>[] = [
     position: 'left',
     hasCalledRush: false,
     drinkPenaltyCount: 0,
+    matchScore: 0,
   },
   {
     id: 'p-2',
@@ -138,6 +150,7 @@ const INITIAL_PLAYERS: Omit<Player, 'hand'>[] = [
     position: 'top',
     hasCalledRush: false,
     drinkPenaltyCount: 0,
+    matchScore: 0,
   },
   {
     id: 'p-3',
@@ -148,12 +161,19 @@ const INITIAL_PLAYERS: Omit<Player, 'hand'>[] = [
     position: 'right',
     hasCalledRush: false,
     drinkPenaltyCount: 0,
+    matchScore: 0,
   },
 ];
 
 let botTurnTimeout: ReturnType<typeof setTimeout> | null = null;
 let botWatchdogTimeout: ReturnType<typeof setTimeout> | null = null;
 let rushGraceTimeout: ReturnType<typeof setTimeout> | null = null;
+let wildDraw4BluffData: {
+  wildPlayerId: string;
+  colorBeforeWild: CardColor;
+  isBluffing: boolean;
+  matchingCards: Card[];
+} | null = null;
 
 const getInitialProfile = () => {
   try {
@@ -244,6 +264,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   gamePhase: 'dealing',
   winner: null,
 
+  // Official Uno Scoring (500 pts target)
+  targetScore: 500,
+  matchWinner: null,
+  roundScores: {},
+
   currentScreen: activeMatchOnStartup ? 'game' : 'menu',
   publicRooms: [],
 
@@ -267,6 +292,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   drawnCardId: null,
   rushCallGracePlayerId: null,
   rushDuel: null,
+  challengeState: null,
 
   partyDrinkPenaltyEnabled: true,
   botSpeedMs: 1100,
@@ -277,20 +303,31 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (botTurnTimeout) clearTimeout(botTurnTimeout);
     if (botWatchdogTimeout) clearTimeout(botWatchdogTimeout);
     if (rushGraceTimeout) clearTimeout(rushGraceTimeout);
+    wildDraw4BluffData = null;
 
     const { playerName, playerAvatar } = get();
 
-    const fullDeck = shuffleDeck(createFullDeck());
-    const players: Player[] = INITIAL_PLAYERS.map((p, i) => ({
-      ...p,
-      name: i === 0 ? playerName : p.name,
-      avatar: i === 0 ? playerAvatar : p.avatar,
-      hand: [],
-      hasCalledRush: false,
-      statusMessage: undefined,
-      isThinking: false,
-      drinkPenaltyCount: 0,
-    }));
+    let fullDeck = shuffleDeck(createFullDeck());
+    const existingPlayers = get().players;
+    const previousMatchWinner = get().matchWinner;
+    const shouldResetMatchScore = previousMatchWinner !== null;
+
+    const players: Player[] = INITIAL_PLAYERS.map((p, i) => {
+      const existing = existingPlayers.find((ep) => ep.id === p.id);
+      const prevMatchScore = shouldResetMatchScore ? 0 : (existing?.matchScore || 0);
+      return {
+        ...p,
+        name: i === 0 ? playerName : p.name,
+        avatar: i === 0 ? playerAvatar : p.avatar,
+        hand: [],
+        hasCalledRush: false,
+        statusMessage: undefined,
+        isThinking: false,
+        drinkPenaltyCount: 0,
+        matchScore: prevMatchScore,
+        roundScore: 0,
+      };
+    });
 
     for (let i = 0; i < 7; i++) {
       for (const player of players) {
@@ -299,9 +336,30 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     }
 
-    let initialDiscardIndex = fullDeck.findIndex((c) => c.color !== 'wild');
-    if (initialDiscardIndex === -1) initialDiscardIndex = 0;
-    const [initialDiscardCard] = fullDeck.splice(initialDiscardIndex, 1);
+    // Official UNO Rule (https://www.unorules.com/):
+    // If the first card is a Wild Draw Four (INFERNO_4), return it to the draw pile,
+    // shuffle the deck, and turn over a new card.
+    let initialDiscardCard: Card | null = null;
+    while (!initialDiscardCard) {
+      const cand = fullDeck.pop();
+      if (!cand) break;
+      if (cand.value === 'INFERNO_4') {
+        fullDeck.unshift(cand);
+        fullDeck = shuffleDeck(fullDeck);
+      } else {
+        initialDiscardCard = cand;
+      }
+    }
+    if (!initialDiscardCard) {
+      initialDiscardCard = {
+        id: 'initial-card-fallback',
+        color: 'crimson',
+        value: '7',
+        label: '7',
+        type: 'number',
+        scoreValue: 7,
+      };
+    }
 
     const discardPile: DiscardCardWithVisual[] = [
       {
@@ -312,39 +370,103 @@ export const useGameStore = create<GameState>((set, get) => ({
       },
     ];
 
-    const activeColor = (initialDiscardCard.color === 'wild' ? 'crimson' : initialDiscardCard.color) as CardColor;
+    let activeColor: CardColor =
+      initialDiscardCard.color === 'wild' ? 'crimson' : (initialDiscardCard.color as CardColor);
+    let turnDirection: TurnDirection = 'clockwise';
+    let currentTurnIndex = 0;
+    let initialGamePhase: GamePhase = 'playing';
+    let activeColorPickerPlayerId: string | null = null;
+    const initialLogs: GameLogEntry[] = [
+      {
+        id: `log-${Date.now()}`,
+        text: `Match dimulai! Kartu pembuka adalah ${initialDiscardCard.label} (${activeColor.toUpperCase()}).`,
+        color: activeColor,
+        timestamp: Date.now(),
+      },
+    ];
+
+    // Official UNO First-Card Action Rules:
+    if (initialDiscardCard.value === 'SPECTRUM') {
+      // Wild: First player chooses what color to begin play
+      initialGamePhase = 'color_picker';
+      activeColorPickerPlayerId = players[0].id;
+      initialLogs.push({
+        id: `log-${Date.now()}-wild`,
+        text: `Kartu Wild terbuka! ${players[0].name} memilih warna awal permainan.`,
+        color: 'solar',
+        timestamp: Date.now() + 1,
+      });
+    } else if (initialDiscardCard.value === 'BURST_2') {
+      // Draw Two: First player draws 2 cards and misses their turn!
+      const drawnCards: Card[] = [];
+      for (let k = 0; k < 2; k++) {
+        const c = fullDeck.pop();
+        if (c) drawnCards.push(c);
+      }
+      players[0].hand.push(...drawnCards);
+      players[0].statusMessage = '+2 KARTU (Draw Two Awal)';
+      currentTurnIndex = 1; // First player skipped
+      initialLogs.push({
+        id: `log-${Date.now()}-d2`,
+        text: `Kartu BURST +2 terbuka! ${players[0].name} harus mengambil 2 kartu dan gilirannya dilewati!`,
+        color: 'crimson',
+        timestamp: Date.now() + 1,
+      });
+    } else if (initialDiscardCard.value === 'HALT') {
+      // Skip: First player loses turn, next player starts
+      players[0].statusMessage = 'HALTED!';
+      currentTurnIndex = 1;
+      initialLogs.push({
+        id: `log-${Date.now()}-halt`,
+        text: `Kartu HALT terbuka! Giliran ${players[0].name} dilewati!`,
+        color: 'crimson',
+        timestamp: Date.now() + 1,
+      });
+    } else if (initialDiscardCard.value === 'REWIND') {
+      // Reverse: Switch direction to counter-clockwise, player to dealer's right (last player) goes first
+      turnDirection = 'counter-clockwise';
+      currentTurnIndex = players.length - 1;
+      initialLogs.push({
+        id: `log-${Date.now()}-rewind`,
+        text: `Kartu REWIND terbuka! Putaran dibalik ke berlawanan jarum jam; ${players[currentTurnIndex].name} jalan duluan!`,
+        color: 'ocean',
+        timestamp: Date.now() + 1,
+      });
+    }
 
     set({
       deck: fullDeck,
       discardPile,
       activeColor,
-      turnDirection: 'clockwise',
+      turnDirection,
       players,
-      currentTurnIndex: 0,
-      gamePhase: 'playing',
+      currentTurnIndex,
+      gamePhase: initialGamePhase,
       winner: null,
+      matchWinner: shouldResetMatchScore ? null : previousMatchWinner,
+      roundScores: {},
       gameMode: 'solo',
       roomId: null,
       myPlayerId: 'p-0',
       penaltyState: null,
       screenShake: 'none',
-      activeColorPickerPlayerId: null,
+      activeColorPickerPlayerId,
       cardMissiles: null,
       hasPlayerDrawnThisTurn: false,
       drawnCardId: null,
       rushCallGracePlayerId: null,
       rushDuel: null,
-      logs: [
-        {
-          id: `log-${Date.now()}`,
-          text: `Match started! Top card is ${initialDiscardCard.label} (${activeColor.toUpperCase()}).`,
-          color: activeColor,
-          timestamp: Date.now(),
-        },
-      ],
+      challengeState: null,
+      logs: initialLogs,
     });
 
     soundFx.playCardDraw();
+
+    if (players[currentTurnIndex].isBot && initialGamePhase === 'playing') {
+      setTimeout(() => {
+        get().triggerBotTurn(currentTurnIndex);
+      }, get().botSpeedMs);
+    }
   },
 
   drawCard: (playerId: string) => {
@@ -509,11 +631,17 @@ export const useGameStore = create<GameState>((set, get) => ({
       gamePhase,
       turnDirection,
       botSpeedMs,
+      deck,
     } = get();
 
     if (gamePhase !== 'playing') return;
     const currentPlayer = players[currentTurnIndex];
     if (!currentPlayer || currentPlayer.id !== playerId) return;
+
+    // Official Uno Rule: If player drew a card this turn, only that drawn card may be played
+    if (get().hasPlayerDrawnThisTurn && get().drawnCardId !== cardId) {
+      return;
+    }
 
     const cardIndex = currentPlayer.hand.findIndex((c) => c.id === cardId);
     if (cardIndex === -1) return;
@@ -529,6 +657,21 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     soundFx.playCardPlay();
 
+    // Track Wild Draw 4 bluff legality before card leaves hand
+    if (cardToPlay.value === 'INFERNO_4') {
+      const matchingCards = currentPlayer.hand.filter(
+        (c) => c.id !== cardId && c.color === activeColor
+      );
+      wildDraw4BluffData = {
+        wildPlayerId: currentPlayer.id,
+        colorBeforeWild: activeColor,
+        isBluffing: matchingCards.length > 0,
+        matchingCards,
+      };
+    } else {
+      wildDraw4BluffData = null;
+    }
+
     const randomRotation = Math.random() * 24 - 12;
     const randomOffsetX = Math.random() * 12 - 6;
     const randomOffsetY = Math.random() * 12 - 6;
@@ -542,20 +685,79 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const updatedHand = currentPlayer.hand.filter((c) => c.id !== cardId);
 
+    // VICTORY CHECK & OFFICIAL UNO SCORING (https://www.unorules.com/)
     if (updatedHand.length === 0) {
       soundFx.playVictory();
+
+      // Official Uno rule: If the last card played is Draw Two or Wild Draw Four,
+      // the next player must still draw the required cards which are then tallied up!
+      let finalPlayers = players.map((p) =>
+        p.id === playerId ? { ...p, hand: [] } : p
+      );
+      let nextDeck = [...deck];
+      let nextDiscard = [...discardPile, newDiscardCard];
+
+      if (cardToPlay.value === 'BURST_2' || cardToPlay.value === 'INFERNO_4') {
+        const penaltyCount = cardToPlay.value === 'BURST_2' ? 2 : 4;
+        const targetVictimIdx = get().getNextPlayerIndex(1);
+        const targetVictim = finalPlayers[targetVictimIdx];
+        if (targetVictim) {
+          const drawnCards: Card[] = [];
+          for (let k = 0; k < penaltyCount; k++) {
+            if (nextDeck.length === 0 && nextDiscard.length > 1) {
+              const top = nextDiscard.pop()!;
+              nextDeck = shuffleDeck(nextDiscard);
+              nextDiscard = [top];
+            }
+            const c = nextDeck.pop();
+            if (c) drawnCards.push(c);
+          }
+          finalPlayers = finalPlayers.map((p, idx) =>
+            idx === targetVictimIdx ? { ...p, hand: [...p.hand, ...drawnCards] } : p
+          );
+        }
+      }
+
+      // Calculate hand score of all opponents per official Uno rules
+      let roundTotalScore = 0;
+      const roundScores: Record<string, number> = {};
+      finalPlayers.forEach((p) => {
+        if (p.id !== currentPlayer.id) {
+          const score = calculateHandScore(p.hand);
+          roundScores[p.id] = score;
+          roundTotalScore += score;
+        } else {
+          roundScores[p.id] = 0;
+        }
+      });
+
+      const updatedWinner: Player = {
+        ...currentPlayer,
+        hand: [],
+        roundScore: roundTotalScore,
+        matchScore: currentPlayer.matchScore + roundTotalScore,
+      };
+
+      finalPlayers = finalPlayers.map((p) =>
+        p.id === currentPlayer.id ? updatedWinner : { ...p, roundScore: roundScores[p.id] || 0 }
+      );
+
+      const isMatchWon = updatedWinner.matchScore >= get().targetScore;
+
       set({
-        discardPile: [...discardPile, newDiscardCard],
-        players: players.map((p) =>
-          p.id === playerId ? { ...p, hand: [] } : p
-        ),
+        deck: nextDeck,
+        discardPile: nextDiscard,
+        players: finalPlayers,
         gamePhase: 'game_over',
-        winner: currentPlayer,
+        winner: updatedWinner,
+        matchWinner: isMatchWon ? updatedWinner : null,
+        roundScores,
         rushDuel: null,
+        challengeState: null,
         logs: [
           {
             id: `log-${Date.now()}`,
-            text: `${currentPlayer.name} PLAYED THEIR LAST CARD AND WON!`,
+            text: `${currentPlayer.name} MENANG RONDE INI (+${roundTotalScore} Poin UNO)! Total: ${updatedWinner.matchScore} Poin.${isMatchWon ? ' JUARA MATCH 500 POIN!' : ''}`,
             color: cardToPlay.color,
             timestamp: Date.now(),
           },
@@ -735,21 +937,139 @@ export const useGameStore = create<GameState>((set, get) => ({
     }));
 
     if (topCard && topCard.value === 'INFERNO_4') {
-      soundFx.playInferno4();
       const targetIdx = get().getNextPlayerIndex(1);
       const targetPlayer = players[targetIdx];
-      get().inflictDrawPenalty(currentPlayer.id, targetPlayer.id, 4, 'inferno_4');
+      const bluffData = wildDraw4BluffData || {
+        wildPlayerId: currentPlayer.id,
+        colorBeforeWild: color,
+        isBluffing: false,
+        matchingCards: [],
+      };
+
+      const challengeState: UnoChallengeState = {
+        wildPlayerId: currentPlayer.id,
+        wildPlayerName: currentPlayer.name,
+        targetPlayerId: targetPlayer.id,
+        targetPlayerName: targetPlayer.name,
+        targetPosition: targetPlayer.position,
+        colorBeforeWild: bluffData.colorBeforeWild,
+        isWildPlayerBluffing: bluffData.isBluffing,
+        matchingCardsInHand: bluffData.matchingCards,
+      };
+
+      set({ challengeState });
+
+      if (!targetPlayer.isBot) {
+        // Human player is the victim: show challenge decision modal
+        set({ gamePhase: 'challenge_decision' });
+        set((state) => ({
+          logs: [
+            {
+              id: `log-${Date.now()}-challenge`,
+              text: `${currentPlayer.name} memainkan INFERNO +4! ${targetPlayer.name} dapat Menerima (+4) atau Menantang (Challenge)!`,
+              color: 'solar',
+              timestamp: Date.now(),
+            },
+            ...state.logs,
+          ],
+        }));
+      } else {
+        // Bot player is the victim: evaluate challenge decision
+        const shouldChallenge = shouldBotChallengeWildDraw4(
+          targetPlayer.hand,
+          currentPlayer.hand.length
+        );
+        setTimeout(() => {
+          get().respondToChallenge(!shouldChallenge);
+        }, get().botSpeedMs * 0.8);
+      }
       return;
     }
 
     get().advanceTurn(1);
   },
 
+  respondToChallenge: (acceptPenalty: boolean) => {
+    const { challengeState } = get();
+    if (!challengeState) return;
+
+    const {
+      wildPlayerId,
+      wildPlayerName,
+      targetPlayerId,
+      targetPlayerName,
+      colorBeforeWild,
+      isWildPlayerBluffing,
+      matchingCardsInHand,
+    } = challengeState;
+
+    if (acceptPenalty) {
+      soundFx.playInferno4();
+      set((state) => ({
+        challengeState: null,
+        gamePhase: 'playing',
+        logs: [
+          {
+            id: `log-${Date.now()}`,
+            text: `${targetPlayerName} menerima penalti +4 kartu dari ${wildPlayerName}.`,
+            color: 'crimson',
+            timestamp: Date.now(),
+          },
+          ...state.logs,
+        ],
+      }));
+      get().inflictDrawPenalty(wildPlayerId, targetPlayerId, 4, 'inferno_4');
+      return;
+    }
+
+    // OFFICIAL UNO CHALLENGE RESOLUTION (https://www.unorules.com/)
+    if (isWildPlayerBluffing) {
+      // GUILTY: Wild player actually had matching color cards!
+      soundFx.playInferno4();
+      const cardLabels = matchingCardsInHand.map((c) => c.label).join(', ');
+      set((state) => ({
+        challengeState: null,
+        gamePhase: 'playing',
+        logs: [
+          {
+            id: `log-${Date.now()}`,
+            text: `TANTANGAN BERHASIL! ${wildPlayerName} terbukti BERSALAH memiliki kartu warna ${colorBeforeWild.toUpperCase()} (${cardLabels})! ${wildPlayerName} harus mengambil 4 kartu!`,
+            color: 'toxic',
+            timestamp: Date.now(),
+          },
+          ...state.logs,
+        ],
+      }));
+
+      // Wild player draws 4 cards penalty. Challenger takes turn!
+      get().inflictDrawPenalty(targetPlayerId, wildPlayerId, 4, 'challenge_penalty');
+    } else {
+      // INNOCENT: Wild player had NO matching color cards!
+      soundFx.playInferno4();
+      set((state) => ({
+        challengeState: null,
+        gamePhase: 'playing',
+        logs: [
+          {
+            id: `log-${Date.now()}`,
+            text: `TANTANGAN GAGAL! ${wildPlayerName} JUJUR (tidak punya warna ${colorBeforeWild.toUpperCase()})! ${targetPlayerName} harus mengambil 6 kartu penalti (4 + 2) dan gilirannya dilewati!`,
+            color: 'crimson',
+            timestamp: Date.now(),
+          },
+          ...state.logs,
+        ],
+      }));
+
+      // Challenger draws 6 cards (4 + 2 penalty) and loses turn!
+      get().inflictDrawPenalty(wildPlayerId, targetPlayerId, 6, 'challenge_failed');
+    }
+  },
+
   inflictDrawPenalty: (
     sourcePlayerId: string,
     targetPlayerId: string,
     count: number,
-    type: 'burst_2' | 'inferno_4' | 'rush_penalty'
+    type: 'burst_2' | 'inferno_4' | 'rush_penalty' | 'challenge_penalty' | 'challenge_failed'
   ) => {
     const { deck, discardPile, players, partyDrinkPenaltyEnabled } = get();
     let currentDeck = [...deck];
@@ -782,7 +1102,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       deck: currentDeck,
       discardPile: currentDiscard,
       gamePhase: 'penalty_animation',
-      screenShake: type === 'inferno_4' ? 'lg' : 'sm',
+      screenShake: type === 'inferno_4' || type === 'challenge_failed' ? 'lg' : 'sm',
       cardMissiles: {
         id: `missile-${Date.now()}`,
         count,
@@ -839,7 +1159,11 @@ export const useGameStore = create<GameState>((set, get) => ({
           if (currentP && currentP.isBot) {
             get().triggerBotTurn(stateNow.currentTurnIndex);
           }
+        } else if (type === 'challenge_penalty') {
+          // The wild player took 4 cards penalty. Turn passes to target player (challenger)!
+          get().advanceTurn(1);
         } else {
+          // Standard action penalty (+2, +4, +6): victim drew and is skipped!
           get().advanceTurn(2);
         }
       }, 450);
@@ -920,7 +1244,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       logs: [
         {
           id: `log-${Date.now()}`,
-          text: `${catcher} lebih cepat! ${victim.name} kalah cepat menekan RUSH (+1 Kartu Penalti)`,
+          text: `${catcher} menangkap ${victim.name} tidak teriak UNO! (+2 Kartu Penalti UNO)`,
           color: 'crimson',
           timestamp: Date.now(),
         },
@@ -928,7 +1252,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       ],
     }));
 
-    get().inflictDrawPenalty('system', targetPlayerId, 1, 'rush_penalty');
+    get().inflictDrawPenalty('system', targetPlayerId, 2, 'rush_penalty');
   },
 
   getNextPlayerIndex: (steps: number = 1, forcedDirection?: TurnDirection): number => {

@@ -191,3 +191,33 @@ export const chooseBotColor = (hand: Card[]): CardColor => {
 
   return bestColor;
 };
+
+// Check if player has any card matching the active color in hand (Wild Draw 4 legality check)
+export const hasMatchingColorInHand = (hand: Card[], color: CardColor): boolean => {
+  return hand.some((c) => c.color === color);
+};
+
+export const getMatchingColorCards = (hand: Card[], color: CardColor): Card[] => {
+  return hand.filter((c) => c.color === color);
+};
+
+// Calculate total score of a hand per official UNO scoring:
+// 0-9: face value, Actions: 20 pts, Wilds: 50 pts
+export const calculateHandScore = (hand: Card[]): number => {
+  return hand.reduce((total, card) => total + card.scoreValue, 0);
+};
+
+// AI decision to challenge a Wild Draw 4:
+// Bot challenges more eagerly if the player who played +4 has few cards (likely bluffing) or random 30-40%
+export const shouldBotChallengeWildDraw4 = (
+  _botHand: Card[],
+  wildPlayerHandCount: number
+): boolean => {
+  // If opponent has 1-2 cards, they are desperate and likely bluffing!
+  if (wildPlayerHandCount <= 2) {
+    return Math.random() < 0.65;
+  }
+  // Otherwise moderate suspicion
+  return Math.random() < 0.35;
+};
+

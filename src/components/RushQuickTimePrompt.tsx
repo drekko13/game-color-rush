@@ -30,13 +30,13 @@ export const RushQuickTimePrompt: React.FC = () => {
               <div className="flex items-center space-x-1.5 text-amber-300 mb-1">
                 <Zap className="w-5 h-5 text-yellow-300 fill-yellow-300 animate-bounce" />
                 <span className="font-black text-xs md:text-sm uppercase tracking-wider">
-                  Kartu Tinggal 1! Tekan RUSH!
+                  Kartu Tinggal 1! Teriak UNO!
                 </span>
                 <Zap className="w-5 h-5 text-yellow-300 fill-yellow-300 animate-bounce" />
               </div>
 
               <p className="text-[11px] text-slate-300 mb-2 font-semibold">
-                Kalah cepat dengan lawan = <span className="text-rose-400 font-black">+1 Kartu Penalti</span>!
+                Tertangkap lawan sebelum giliran berikutnya = <span className="text-rose-400 font-black">+2 Kartu Penalti UNO</span>!
               </p>
 
               {/* Progress countdown bar (100% GPU accelerated via CSS, 0 JS thread lockup) */}
@@ -58,12 +58,12 @@ export const RushQuickTimePrompt: React.FC = () => {
                 className="w-full py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 via-amber-500 to-rose-500 text-slate-950 font-black text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.9)] flex items-center justify-center space-x-2 cursor-pointer"
               >
                 <Zap className="w-4 h-4 text-slate-950 fill-slate-950" />
-                <span>TEKAN RUSH SEKARANG!</span>
+                <span>TERIAK "UNO!" SEKARANG!</span>
               </motion.button>
             </div>
           </motion.div>
         ) : (
-          /* Opponent has 1 card left! Player can catch them before they shout RUSH! */
+          /* Opponent has 1 card left! Player can catch them before they shout UNO! */
           <motion.div
             initial={{ scale: 0.8, y: 25, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -80,7 +80,7 @@ export const RushQuickTimePrompt: React.FC = () => {
               </div>
 
               <p className="text-[11px] text-slate-300 mb-2 font-semibold">
-                Tangkap sebelum lawan teriak RUSH! (Penalti <span className="text-rose-400 font-black">+1 Kartu</span>)
+                Tangkap sebelum lawan teriak UNO! (Penalti <span className="text-rose-400 font-black">+2 Kartu</span>)
               </p>
 
               {/* Progress countdown bar (100% GPU accelerated via CSS, 0 JS thread lockup) */}
@@ -102,7 +102,7 @@ export const RushQuickTimePrompt: React.FC = () => {
                 className="w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-600 via-red-500 to-rose-600 text-white font-black text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(225,29,72,0.9)] flex items-center justify-center space-x-2 cursor-pointer"
               >
                 <AlertTriangle className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-                <span>TANGKAP {rushDuel.targetPlayerName.toUpperCase()}!</span>
+                <span>TANGKAP UNO {rushDuel.targetPlayerName.toUpperCase()}!</span>
               </motion.button>
             </div>
           </motion.div>

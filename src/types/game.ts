@@ -27,6 +27,8 @@ export interface Player {
   statusMessage?: string;
   isThinking?: boolean;
   drinkPenaltyCount: number;
+  matchScore: number;
+  roundScore?: number;
   clientPlayerId?: string;
   isDisconnected?: boolean;
 }
@@ -63,15 +65,32 @@ export interface PublicRoomItem {
   status: 'waiting' | 'playing';
 }
 
-export type GamePhase = 'dealing' | 'playing' | 'color_picker' | 'penalty_animation' | 'game_over';
+export type GamePhase =
+  | 'dealing'
+  | 'playing'
+  | 'color_picker'
+  | 'challenge_decision'
+  | 'penalty_animation'
+  | 'game_over';
 
 export interface PenaltyAnimationState {
   id: string;
-  type: 'burst_2' | 'inferno_4' | 'rush_penalty';
+  type: 'burst_2' | 'inferno_4' | 'rush_penalty' | 'challenge_penalty' | 'challenge_failed';
   sourcePlayerId: string;
   targetPlayerId: string;
   cardsCount: number;
   showDrinkSplash: boolean;
+}
+
+export interface UnoChallengeState {
+  wildPlayerId: string;
+  wildPlayerName: string;
+  targetPlayerId: string;
+  targetPlayerName: string;
+  targetPosition: PlayerPosition;
+  colorBeforeWild: CardColor;
+  isWildPlayerBluffing: boolean; // True if wildPlayer had cards matching colorBeforeWild
+  matchingCardsInHand: Card[]; // Cards the player had that matched colorBeforeWild
 }
 
 export interface RushDuelState {
