@@ -26,3 +26,7 @@ dist-ssr
 # Environment secrets (jangan di-commit!)
 .env
 backend/.env
+
+# Persistent database data (seluruh file dan folder di backend/data tidak dikirim ke git)
+backend/data/
+backend/data/**

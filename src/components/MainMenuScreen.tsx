@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '../store/useGameStore';
 import { soundFx } from '../audio/soundEffects';
 import { PlayerAvatar, AVATAR_OPTIONS } from './PlayerAvatar';
+import { UsernamePlate } from './UsernamePlate';
 import {
   Sparkles,
   Bot,
@@ -19,6 +20,8 @@ import {
   Crown,
   Play,
   ArrowLeft,
+  ShoppingBag,
+  Trophy,
 } from 'lucide-react';
 
 export const MainMenuScreen: React.FC = () => {
@@ -35,6 +38,11 @@ export const MainMenuScreen: React.FC = () => {
     partyDrinkPenaltyEnabled,
     togglePartyDrinkPenalty,
     onlineCount,
+    authUser,
+    openAuthModal,
+    openProfileModal,
+    openShopModal,
+    openLeaderboardModal,
   } = useGameStore();
 
   const [multiplayerTab, setMultiplayerTab] = useState<'quick' | 'create' | 'join' | 'public'>('quick');
@@ -90,33 +98,98 @@ export const MainMenuScreen: React.FC = () => {
       </div>
 
       {/* Top Brand Pill Header */}
-      <header className="w-full max-w-7xl mx-auto flex items-center justify-between py-1.5 px-3 md:px-5 rounded-2xl bg-slate-950/60 border border-white/10 backdrop-blur-md z-20 shrink-0">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 via-amber-500 to-sky-500 flex items-center justify-center shadow-lg font-black text-white text-sm">
+      <header className="w-full max-w-7xl mx-auto flex items-center justify-between py-1.5 px-2.5 sm:px-4 md:px-5 rounded-2xl bg-slate-950/60 border border-white/10 backdrop-blur-md z-20 shrink-0">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-rose-500 via-amber-500 to-sky-500 flex items-center justify-center shadow-lg font-black text-white text-xs sm:text-sm shrink-0">
             CR
           </div>
           <div>
-            <h1 className="text-sm md:text-base font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-amber-300 to-sky-400 uppercase">
+            <h1 className="text-xs sm:text-base font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-amber-300 to-sky-400 uppercase">
               ColorRush
             </h1>
-            <p className="text-[10px] text-slate-400 font-semibold tracking-wider hidden sm:block">
+            <p className="text-[10px] text-slate-400 font-semibold tracking-wider hidden md:block">
               High Energy Arcade Card Battle
             </p>
           </div>
         </div>
 
-        {/* Quick Settings: Online Count + Party Drink Mode */}
-        <div className="flex items-center space-x-2">
+        {/* Header Actions: Leaderboard + Toko + Account + Online Count */}
+        <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
+          {/* Papan Peringkat (Leaderboard) Button */}
+          <button
+            onClick={() => {
+              soundFx.playCardDraw();
+              openLeaderboardModal();
+            }}
+            className="px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
+            title="Buka Papan Peringkat (Leaderboard Juara #1-3)"
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Peringkat</span>
+          </button>
+
+          {/* Toko Poin (Store) Button */}
+          <button
+            onClick={() => {
+              soundFx.playCardDraw();
+              openShopModal();
+            }}
+            className="px-2 py-1 sm:px-2.5 sm:py-1 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
+            title="Buka Toko Poin (Beli Border Profile & Username)"
+          >
+            <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Toko</span>
+          </button>
+
+          {/* Account Profile / Login Button */}
+          {authUser ? (
+            <button
+              onClick={() => {
+                soundFx.playCardDraw();
+                openProfileModal();
+              }}
+              className="px-1.5 sm:px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
+              title="Buka Profil & Riwayat Poin"
+            >
+              <PlayerAvatar
+                avatarId={authUser.avatar}
+                size="xs"
+                borderId={authUser.activeProfileBorder || 'default'}
+              />
+              <UsernamePlate
+                username={authUser.username}
+                borderId={authUser.activeUsernameBorder || 'default'}
+                className="hidden md:inline text-xs truncate max-w-[80px]"
+              />
+              <span className="px-1 sm:px-1.5 py-0.2 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                {authUser.totalPoints} Pts
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                soundFx.playCardDraw();
+                openAuthModal('login');
+              }}
+              className="px-2 sm:px-2.5 py-1 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:brightness-110 text-white transition-all flex items-center space-x-1 text-xs font-black shadow-md cursor-pointer shrink-0"
+              title="Masuk / Daftar Akun untuk Menyimpan Poin & Riwayat"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Masuk</span>
+            </button>
+          )}
+
           {/* Live Online Users Badge */}
-          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-400/20 text-emerald-300">
+          <div className="flex items-center space-x-1 px-1.5 sm:px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-            <span className="text-[11px] font-black">{onlineCount}</span>
-            <Users className="w-3 h-3" />
+            <span className="text-[10px] sm:text-[11px] font-black">{onlineCount}</span>
+            <Users className="w-3 h-3 hidden sm:inline" />
           </div>
 
+          {/* Party Mode Toggle: Visible on tablet & desktop (on mobile already accessible in the main menu card) */}
           <button
             onClick={togglePartyDrinkPenalty}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition-all flex items-center space-x-1.5 ${
+            className={`hidden md:flex px-2.5 py-1 rounded-xl text-xs font-bold border transition-all items-center space-x-1.5 cursor-pointer shrink-0 ${
               partyDrinkPenaltyEnabled
                 ? 'bg-amber-500/20 border-amber-400/40 text-amber-300 shadow-sm'
                 : 'bg-slate-900 border-white/10 text-slate-400'
@@ -124,7 +197,7 @@ export const MainMenuScreen: React.FC = () => {
             title="Toggle Efek Animasi Penalti Minum"
           >
             <Beer className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Party Drink Mode:</span>
+            <span>Party Mode:</span>
             <span className="text-[11px] font-black">{partyDrinkPenaltyEnabled ? 'ON' : 'OFF'}</span>
           </button>
         </div>
@@ -192,7 +265,11 @@ export const MainMenuScreen: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <PlayerAvatar avatarId={playerAvatar} size="lg" />
+              <PlayerAvatar
+                avatarId={playerAvatar}
+                size="lg"
+                borderId={authUser?.activeProfileBorder || 'default'}
+              />
 
               <div className="flex-1">
                 <input
@@ -221,6 +298,95 @@ export const MainMenuScreen: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {/* Account Status / Profile Quick Banner */}
+            {authUser ? (
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-500/10 border border-amber-400/25">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <span className="text-base select-none">{authUser.tier?.badge || '⭐'}</span>
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-white flex items-center space-x-1.5 truncate">
+                      <UsernamePlate
+                        username={authUser.username}
+                        plateId={authUser.activeUsernameBorder || 'default'}
+                        size="sm"
+                      />
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold shrink-0">
+                        {authUser.totalPoints} Pts
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {authUser.tier?.name} • {authUser.wins} Menang ({authUser.winRate}%)
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1.5 shrink-0">
+                  <button
+                    onClick={() => {
+                      soundFx.playCardDraw();
+                      openLeaderboardModal();
+                    }}
+                    className="px-2 py-1 rounded-lg bg-slate-850 hover:bg-slate-750 text-amber-300 border border-amber-400/30 text-[11px] font-bold transition-all flex items-center space-x-1 cursor-pointer"
+                    title="Buka Papan Peringkat"
+                  >
+                    <Trophy className="w-3 h-3 text-amber-400" />
+                    <span className="hidden sm:inline">Peringkat</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      soundFx.playCardDraw();
+                      openShopModal();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-slate-950 font-black text-[11px] shadow transition-transform active:scale-95 flex items-center space-x-1 cursor-pointer"
+                    title="Buka Toko Kosmetik"
+                  >
+                    <ShoppingBag className="w-3 h-3" />
+                    <span>Toko</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      soundFx.playCardDraw();
+                      openProfileModal();
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-[11px] font-bold transition-colors cursor-pointer"
+                  >
+                    Profil
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-sky-500/10 border border-white/10">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-white flex items-center space-x-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Simpan Poin & Riwayat</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Masuk untuk simpan riwayat & beli kosmetik!</p>
+                </div>
+                <div className="flex items-center space-x-1.5 shrink-0">
+                  <button
+                    onClick={() => {
+                      soundFx.playCardDraw();
+                      openShopModal();
+                    }}
+                    className="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-black text-[11px] border border-amber-400/30 flex items-center space-x-1 transition-transform active:scale-95 cursor-pointer"
+                    title="Lihat Katalog Toko"
+                  >
+                    <ShoppingBag className="w-3 h-3 text-amber-400" />
+                    <span>Toko</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      soundFx.playCardDraw();
+                      openAuthModal('login');
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:brightness-110 text-white font-black text-xs shadow-md transition-transform active:scale-95 cursor-pointer shrink-0"
+                  >
+                    Masuk
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Mobile Only: 1 Primary "MAIN SEKARANG" Button initially */}

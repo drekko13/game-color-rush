@@ -1,6 +1,7 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
+import { db } from './db.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -60,12 +61,30 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
   }
   next();
 });
+
+// Authentication middleware for Express API routes
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice(7).trim()
+    : (req.query.token || req.headers['x-auth-token']);
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Sesi tidak ditemukan atau belum login.' });
+  }
+  const user = db.getUserByToken(token);
+  if (!user) {
+    return res.status(401).json({ success: false, error: 'Sesi login telah kedaluwarsa. Silakan login kembali.' });
+  }
+  req.user = user;
+  req.token = token;
+  next();
+}
 
 app.get('/', (req, res) => {
   res.json({
@@ -75,6 +94,185 @@ app.get('/', (req, res) => {
     connections: io.engine.clientsCount || 0,
     uptime: Math.floor(process.uptime()) + 's',
   });
+});
+
+// --- AUTH & HISTORY REST API ENDPOINTS ---
+
+// Register new user (Username, Email, Password, Avatar)
+app.post('/api/auth/register', (req, res) => {
+  try {
+    const { username, email, password, avatar } = req.body || {};
+    if (!username || typeof username !== 'string' || username.trim().length < 3 || username.trim().length > 25) {
+      return res.status(400).json({ success: false, error: 'Username harus terdiri dari 3 hingga 25 karakter.' });
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
+      return res.status(400).json({ success: false, error: 'Username hanya boleh berisi huruf, angka, dan garis bawah (_).' });
+    }
+    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({ success: false, error: 'Format email tidak valid.' });
+    }
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Kata sandi minimal 6 karakter.' });
+    }
+
+    const user = db.createUser({ username, email, password, avatar: avatar || 'crown' });
+    const token = db.createSession(user.id);
+    return res.status(201).json({ success: true, token, user });
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message || 'Gagal mendaftar.' });
+  }
+});
+
+// Login with email OR username + password
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { identifier, password } = req.body || {};
+    if (!identifier || typeof identifier !== 'string' || !identifier.trim()) {
+      return res.status(400).json({ success: false, error: 'Masukkan username atau email kamu.' });
+    }
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ success: false, error: 'Masukkan kata sandi kamu.' });
+    }
+
+    const user = db.authenticate(identifier, password);
+    const token = db.createSession(user.id);
+    return res.json({ success: true, token, user });
+  } catch (err) {
+    return res.status(401).json({ success: false, error: err.message || 'Gagal masuk.' });
+  }
+});
+
+// Get current logged-in user profile & stats
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  return res.json({ success: true, user: req.user });
+});
+
+// Logout session
+app.post('/api/auth/logout', (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice(7).trim()
+    : req.query.token;
+  if (token) db.deleteSession(token);
+  return res.json({ success: true, message: 'Berhasil keluar.' });
+});
+
+// Update profile
+app.post('/api/auth/profile', requireAuth, (req, res) => {
+  try {
+    const { avatar, username } = req.body || {};
+    const updatedUser = db.updateProfile(req.user.id, { avatar, username });
+    return res.json({ success: true, user: updatedUser });
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Save match history & points when game ends
+app.post('/api/history', requireAuth, (req, res) => {
+  try {
+    const { gameMode, result, pointsEarned, roundScore, opponents, cardsLeft } = req.body || {};
+    const recordResult = db.addMatchHistory(req.user.id, {
+      gameMode,
+      result,
+      pointsEarned,
+      roundScore,
+      opponents,
+      cardsLeft,
+    });
+    return res.json({
+      success: true,
+      user: recordResult.updatedUser,
+      historyItem: recordResult.historyItem,
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Get user's match history
+app.get('/api/history', requireAuth, (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const history = db.getUserHistory(req.user.id, limit);
+    return res.json({ success: true, history });
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// --- SHOP & COSMETICS REST API ENDPOINTS ---
+
+// Get shop catalog (Profile borders & Username borders)
+app.get('/api/shop/items', (req, res) => {
+  return res.json({ success: true, catalog: db.getShopCatalog() });
+});
+
+// Buy item with points
+app.post('/api/shop/buy', requireAuth, (req, res) => {
+  try {
+    const { itemType, itemId } = req.body || {};
+    if (!itemType || !itemId) {
+      return res.status(400).json({ success: false, error: 'Parameter itemType dan itemId wajib diisi.' });
+    }
+    const updatedUser = db.buyItem(req.user.id, itemType, itemId);
+    return res.json({
+      success: true,
+      message: 'Item berhasil dibeli dan dipasang!',
+      user: updatedUser,
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Equip item
+app.post('/api/shop/equip', requireAuth, (req, res) => {
+  try {
+    const { itemType, itemId } = req.body || {};
+    if (!itemType || !itemId) {
+      return res.status(400).json({ success: false, error: 'Parameter itemType dan itemId wajib diisi.' });
+    }
+    const updatedUser = db.equipItem(req.user.id, itemType, itemId);
+    return res.json({
+      success: true,
+      message: 'Item berhasil dipasang!',
+      user: updatedUser,
+    });
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// --- LEADERBOARD REST API ENDPOINT ---
+// Get global leaderboard with category ('points' or 'winRate')
+app.get('/api/leaderboard', (req, res) => {
+  try {
+    const sortBy = req.query.sortBy === 'winRate' ? 'winRate' : 'points';
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+
+    // Optional user identification via auth token
+    let currentUserId = null;
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : (req.query.token || req.headers['x-auth-token']);
+
+    if (token) {
+      const user = db.getUserByToken(token);
+      if (user) {
+        currentUserId = user.id;
+      }
+    }
+
+    const leaderboardResult = db.getLeaderboard(sortBy, limit, currentUserId);
+    return res.json({
+      success: true,
+      ...leaderboardResult,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message || 'Gagal memuat papan peringkat.' });
+  }
 });
 
 // --- CARD ENGINE DATA & HELPERS ---
@@ -212,6 +410,8 @@ function initGameInRoom(room) {
       name: hp.name || `Player ${idx + 1}`,
       originalName: hp.name || `Player ${idx + 1}`,
       avatar: hp.avatar || 'crown',
+      profileBorder: hp.profileBorder || 'default',
+      usernameBorder: hp.usernameBorder || 'default',
       isBot: false,
       isDisconnected: false,
       isHost: isPlayerHost,
@@ -232,6 +432,8 @@ function initGameInRoom(room) {
       socketId: null,
       name: b.name,
       avatar: b.avatar,
+      profileBorder: 'default',
+      usernameBorder: 'default',
       isBot: true,
       position: 'top',
       hand: [],
@@ -393,6 +595,8 @@ function broadcastRoomState(roomId) {
           clientPlayerId: other.clientPlayerId || other.id,
           name: other.name,
           avatar: other.avatar,
+          profileBorder: other.profileBorder || 'default',
+          usernameBorder: other.usernameBorder || 'default',
           isBot: Boolean(other.isBot),
           isDisconnected: Boolean(other.isDisconnected || other.isAway),
           isAway: Boolean(other.isAway),
@@ -516,11 +720,26 @@ function serverPlayCard(room, playerId, cardId) {
 
   if (currentPlayer.hand.length === 0) {
     room.gamePhase = 'game_over';
+
+    // Calculate hand score of all opponents per official Uno rules
+    let roundPoints = 0;
+    room.players.forEach((p) => {
+      if (p.id !== currentPlayer.id && Array.isArray(p.hand)) {
+        p.roundScore = p.hand.reduce((sum, c) => sum + (c.scoreValue || 0), 0);
+        roundPoints += p.roundScore;
+      } else {
+        p.roundScore = 0;
+      }
+    });
+
+    currentPlayer.roundScore = roundPoints;
+    currentPlayer.matchScore = (currentPlayer.matchScore || 0) + roundPoints;
+
     room.winner = currentPlayer;
     room.rematchReadyPlayers = new Set();
     room.logs.unshift({
       id: `log-${Date.now()}`,
-      text: `${currentPlayer.name} PLAYED THEIR LAST CARD AND WON!`,
+      text: `${currentPlayer.name} MENANG RONDE INI (+${roundPoints} Poin UNO)!`,
       timestamp: Date.now(),
     });
     broadcastRoomState(room.roomId);
@@ -772,6 +991,8 @@ function handlePlayerDeparture(room, departingPlayer, reason = 'left') {
   if (remainingHumans.length === 1) {
     const winnerPlayer = remainingHumans[0];
     room.gamePhase = 'game_over';
+    winnerPlayer.roundScore = 50;
+    winnerPlayer.matchScore = (winnerPlayer.matchScore || 0) + 50;
     room.winner = winnerPlayer;
     if (room.rushTimeout) clearTimeout(room.rushTimeout);
     room.rushDuel = null;
@@ -869,6 +1090,8 @@ io.on('connection', (socket) => {
           clientPlayerId,
           name: hostName,
           avatar: hostAvatar,
+          profileBorder: (userData && userData.profileBorder) ? userData.profileBorder : 'default',
+          usernameBorder: (userData && userData.usernameBorder) ? userData.usernameBorder : 'default',
           isHost: true,
         },
       ],
@@ -952,6 +1175,8 @@ io.on('connection', (socket) => {
         clientPlayerId,
         name: guestName,
         avatar: guestAvatar,
+        profileBorder: (userData && userData.profileBorder) ? userData.profileBorder : 'default',
+        usernameBorder: (userData && userData.usernameBorder) ? userData.usernameBorder : 'default',
         isHost: isNewHost,
       });
       if (isNewHost) {
@@ -963,6 +1188,8 @@ io.on('connection', (socket) => {
       room.lobbyPlayers[existingIdx].clientPlayerId = clientPlayerId;
       room.lobbyPlayers[existingIdx].name = guestName;
       room.lobbyPlayers[existingIdx].avatar = guestAvatar;
+      if (userData && userData.profileBorder) room.lobbyPlayers[existingIdx].profileBorder = userData.profileBorder;
+      if (userData && userData.usernameBorder) room.lobbyPlayers[existingIdx].usernameBorder = userData.usernameBorder;
       if (room.lobbyPlayers[existingIdx].isHost || existingIdx === 0 || room.hostClientId === clientPlayerId) {
         room.lobbyPlayers[existingIdx].isHost = true;
         room.hostId = socket.id;
@@ -1030,6 +1257,8 @@ io.on('connection', (socket) => {
           clientPlayerId,
           name: hostName,
           avatar: hostAvatar,
+          profileBorder: (userData && userData.profileBorder) ? userData.profileBorder : 'default',
+          usernameBorder: (userData && userData.usernameBorder) ? userData.usernameBorder : 'default',
           isHost: true,
         },
       ],
@@ -1373,6 +1602,8 @@ io.on('connection', (socket) => {
         p.isBot = false;
         p.name = p.originalName || (userData && userData.name) || p.name.replace(' (AI)', '');
         if (userData && userData.avatar) p.avatar = userData.avatar;
+        if (userData && userData.profileBorder) p.profileBorder = userData.profileBorder;
+        if (userData && userData.usernameBorder) p.usernameBorder = userData.usernameBorder;
 
         room.logs.unshift({
           id: `log-${Date.now()}`,
@@ -1421,6 +1652,8 @@ io.on('connection', (socket) => {
         lp.socketId = socket.id;
         if (userData && userData.name) lp.name = userData.name;
         if (userData && userData.avatar) lp.avatar = userData.avatar;
+        if (userData && userData.profileBorder) lp.profileBorder = userData.profileBorder;
+        if (userData && userData.usernameBorder) lp.usernameBorder = userData.usernameBorder;
         socket.join(code);
 
         const isLpHost = Boolean(

@@ -47,7 +47,13 @@ class SocketService {
     return this.socket;
   }
 
-  public joinMatchmaking(user: { name: string; avatar: string; clientPlayerId?: string }) {
+  public joinMatchmaking(user: {
+    name: string;
+    avatar: string;
+    clientPlayerId?: string;
+    profileBorder?: string;
+    usernameBorder?: string;
+  }) {
     this.getSocket().emit('join_matchmaking', user);
   }
 
@@ -55,11 +61,25 @@ class SocketService {
     this.getSocket().emit('leave_matchmaking');
   }
 
-  public createRoom(user: { name: string; avatar: string; isPublic?: boolean; maxPlayers?: number; clientPlayerId?: string }) {
+  public createRoom(user: {
+    name: string;
+    avatar: string;
+    isPublic?: boolean;
+    maxPlayers?: number;
+    clientPlayerId?: string;
+    profileBorder?: string;
+    usernameBorder?: string;
+  }) {
     this.getSocket().emit('create_room', user);
   }
 
-  public joinRandomMatch(user: { name: string; avatar: string; clientPlayerId?: string }) {
+  public joinRandomMatch(user: {
+    name: string;
+    avatar: string;
+    clientPlayerId?: string;
+    profileBorder?: string;
+    usernameBorder?: string;
+  }) {
     this.getSocket().emit('random_match', user);
   }
 
@@ -71,11 +91,29 @@ class SocketService {
     this.getSocket().emit('get_online_count');
   }
 
-  public joinRoom(roomId: string, user: { name: string; avatar: string; clientPlayerId?: string }) {
+  public joinRoom(
+    roomId: string,
+    user: {
+      name: string;
+      avatar: string;
+      clientPlayerId?: string;
+      profileBorder?: string;
+      usernameBorder?: string;
+    }
+  ) {
     this.getSocket().emit('join_room', { roomId, userData: user });
   }
 
-  public reconnectRoom(roomId: string, clientPlayerId: string, user: { name: string; avatar: string }) {
+  public reconnectRoom(
+    roomId: string,
+    clientPlayerId: string,
+    user: {
+      name: string;
+      avatar: string;
+      profileBorder?: string;
+      usernameBorder?: string;
+    }
+  ) {
     this.getSocket().emit('reconnect_room', { roomId, clientPlayerId, userData: user });
   }
 

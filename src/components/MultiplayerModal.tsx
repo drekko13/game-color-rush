@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { PlayerAvatar, AVATAR_OPTIONS } from './PlayerAvatar';
+import { UsernamePlate } from './UsernamePlate';
 
 interface MultiplayerModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
     startSoloGame,
     currentScreen,
     players,
+    authUser,
   } = useGameStore();
 
   const isMatchInProgress = currentScreen === 'game' || roomLobby?.status === 'playing';
@@ -352,10 +354,18 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                               }`}
                             >
                               <div className="flex items-center space-x-2.5">
-                                <PlayerAvatar avatarId={p.avatar} size="sm" />
+                                <PlayerAvatar
+                                  avatarId={p.avatar}
+                                  size="sm"
+                                  borderId={p.profileBorder || (isMe ? authUser?.activeProfileBorder : 'default')}
+                                />
                                 <div>
                                   <div className="flex items-center space-x-1.5">
-                                    <span className="font-bold text-xs text-white">{p.name}</span>
+                                    <UsernamePlate
+                                      username={p.name}
+                                      borderId={p.usernameBorder || (isMe ? authUser?.activeUsernameBorder : 'default')}
+                                      size="sm"
+                                    />
                                     {isMe && (
                                       <span className="text-[9px] font-black text-sky-400 bg-sky-500/20 px-1.5 py-0.2 rounded border border-sky-400/30 uppercase">
                                         Kamu
@@ -470,9 +480,17 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                               }`}
                             >
                               <div className="flex items-center space-x-2.5">
-                                <PlayerAvatar avatarId={lp.avatar} size="md" />
+                                <PlayerAvatar
+                                  avatarId={lp.avatar}
+                                  size="md"
+                                  borderId={lp.profileBorder || (isMe ? authUser?.activeProfileBorder : 'default')}
+                                />
                                 <div className="flex items-center space-x-2">
-                                  <span className="font-bold text-sm text-white">{lp.name}</span>
+                                  <UsernamePlate
+                                    username={lp.name}
+                                    borderId={lp.usernameBorder || (isMe ? authUser?.activeUsernameBorder : 'default')}
+                                    size="md"
+                                  />
                                   {isMe && (
                                     <span className="text-[9px] font-black text-sky-400 bg-sky-500/20 px-1.5 py-0.5 rounded border border-sky-400/30 uppercase">
                                       Kamu

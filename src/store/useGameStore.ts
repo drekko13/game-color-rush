@@ -12,6 +12,11 @@ import type {
   RushDuelState,
   TurnDirection,
   UnoChallengeState,
+  UserProfile,
+  MatchHistoryItem,
+  ShopCatalog,
+  LeaderboardCategory,
+  LeaderboardEntry,
 } from '../types/game';
 import {
   calculateHandScore,
@@ -24,6 +29,7 @@ import {
 } from '../game/deck';
 import { soundFx } from '../audio/soundEffects';
 import { socketService } from '../services/socket';
+import { apiService } from '../services/api';
 
 interface GameState {
   deck: Card[];
@@ -123,6 +129,56 @@ interface GameState {
   leaveRoom: () => void;
   toggleRematchReady: () => void;
   initMultiplayerSocket: () => void;
+
+  // Auth & Account State
+  authUser: UserProfile | null;
+  authToken: string | null;
+  matchHistory: MatchHistoryItem[];
+  isAuthLoading: boolean;
+  isAuthModalOpen: boolean;
+  authModalTab: 'login' | 'register';
+  isProfileModalOpen: boolean;
+  lastGamePointsGained: number;
+  lastGameSaved: boolean;
+
+  // Auth Actions
+  initAuth: () => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  registerUser: (username: string, email: string, password: string, avatar?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  openAuthModal: (tab?: 'login' | 'register') => void;
+  closeAuthModal: () => void;
+  openProfileModal: () => void;
+  closeProfileModal: () => void;
+  fetchMatchHistory: () => Promise<void>;
+  recordGameResult: (matchData: {
+    gameMode: 'solo' | 'multiplayer';
+    result: 'win' | 'loss';
+    pointsEarned: number;
+    roundScore?: number;
+    opponents: string[];
+    cardsLeft: number;
+  }) => Promise<void>;
+
+  // Shop & Cosmetics State
+  isShopModalOpen: boolean;
+  shopCatalog: ShopCatalog | null;
+  openShopModal: () => void;
+  closeShopModal: () => void;
+  fetchShopCatalog: () => Promise<void>;
+  buyShopItem: (itemType: 'profile_border' | 'username_border', itemId: string) => Promise<void>;
+  equipShopItem: (itemType: 'profile_border' | 'username_border', itemId: string) => Promise<void>;
+
+  // Leaderboard State
+  isLeaderboardOpen: boolean;
+  leaderboardCategory: LeaderboardCategory;
+  leaderboardEntries: LeaderboardEntry[];
+  currentUserLeaderboardRank: LeaderboardEntry | null;
+  isLeaderboardLoading: boolean;
+  openLeaderboardModal: () => void;
+  closeLeaderboardModal: () => void;
+  setLeaderboardCategory: (category: LeaderboardCategory) => void;
+  fetchLeaderboard: (category?: LeaderboardCategory) => Promise<void>;
 }
 
 const INITIAL_PLAYERS: Omit<Player, 'hand'>[] = [
@@ -310,13 +366,35 @@ export const useGameStore = create<GameState>((set, get) => ({
   soundMuted: false,
   logs: [],
 
+  // Auth & Account Initial State
+  authUser: null,
+  authToken: null,
+  matchHistory: [],
+  isAuthLoading: false,
+  isAuthModalOpen: false,
+  authModalTab: 'login',
+  isProfileModalOpen: false,
+  lastGamePointsGained: 0,
+  lastGameSaved: false,
+
+  // Shop Initial State
+  isShopModalOpen: false,
+  shopCatalog: null,
+
+  // Leaderboard Initial State
+  isLeaderboardOpen: false,
+  leaderboardCategory: 'points',
+  leaderboardEntries: [],
+  currentUserLeaderboardRank: null,
+  isLeaderboardLoading: false,
+
   initGame: () => {
     if (botTurnTimeout) clearTimeout(botTurnTimeout);
     if (botWatchdogTimeout) clearTimeout(botWatchdogTimeout);
     if (rushGraceTimeout) clearTimeout(rushGraceTimeout);
     wildDraw4BluffData = null;
 
-    const { playerName, playerAvatar } = get();
+    const { playerName, playerAvatar, authUser } = get();
 
     let fullDeck = shuffleDeck(createFullDeck());
     const existingPlayers = get().players;
@@ -330,6 +408,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         ...p,
         name: i === 0 ? playerName : p.name,
         avatar: i === 0 ? playerAvatar : p.avatar,
+        profileBorder: i === 0 ? (authUser?.activeProfileBorder || 'default') : 'default',
+        usernameBorder: i === 0 ? (authUser?.activeUsernameBorder || 'default') : 'default',
         hand: [],
         hasCalledRush: false,
         statusMessage: undefined,
@@ -798,6 +878,23 @@ export const useGameStore = create<GameState>((set, get) => ({
           ...get().logs,
         ],
       });
+
+      // Record game result for local human player in solo mode
+      const humanPlayer = finalPlayers.find((p) => !p.isBot) || finalPlayers[0];
+      if (humanPlayer) {
+        const isHumanWinner = currentPlayer.id === humanPlayer.id;
+        const opponentNames = finalPlayers.filter((p) => p.id !== humanPlayer.id).map((p) => p.name);
+        const pointsEarned = isHumanWinner ? roundTotalScore : 10;
+        get().recordGameResult({
+          gameMode: 'solo',
+          result: isHumanWinner ? 'win' : 'loss',
+          pointsEarned,
+          roundScore: isHumanWinner ? roundTotalScore : 0,
+          opponents: opponentNames,
+          cardsLeft: humanPlayer.hand.length,
+        });
+      }
+
       return;
     }
 
@@ -1472,11 +1569,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   joinRandomMatch: () => {
     get().initMultiplayerSocket();
-    const { playerName, playerAvatar } = get();
+    const { playerName, playerAvatar, authUser } = get();
     socketService.joinRandomMatch({
       name: playerName,
       avatar: playerAvatar,
       clientPlayerId: getOrCreateClientId(),
+      profileBorder: authUser?.activeProfileBorder || 'default',
+      usernameBorder: authUser?.activeUsernameBorder || 'default',
     });
   },
 
@@ -1489,12 +1588,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   startMatchmaking: () => {
     get().initMultiplayerSocket();
-    const { playerName, playerAvatar } = get();
+    const { playerName, playerAvatar, authUser } = get();
     set({ isSearchingMatch: true, queueCount: 1 });
     socketService.joinMatchmaking({
       name: playerName,
       avatar: playerAvatar,
       clientPlayerId: getOrCreateClientId(),
+      profileBorder: authUser?.activeProfileBorder || 'default',
+      usernameBorder: authUser?.activeUsernameBorder || 'default',
     });
   },
 
@@ -1505,13 +1606,15 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   createCustomRoom: (options?: { isPublic?: boolean; maxPlayers?: number }) => {
     get().initMultiplayerSocket();
-    const { playerName, playerAvatar } = get();
+    const { playerName, playerAvatar, authUser } = get();
     socketService.createRoom({
       name: playerName,
       avatar: playerAvatar,
       clientPlayerId: getOrCreateClientId(),
       isPublic: options?.isPublic ?? false,
       maxPlayers: options?.maxPlayers ?? 4,
+      profileBorder: authUser?.activeProfileBorder || 'default',
+      usernameBorder: authUser?.activeUsernameBorder || 'default',
     });
   },
 
@@ -1519,12 +1622,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     const cleanCode = code.trim().toUpperCase();
     if (!cleanCode) return;
     get().initMultiplayerSocket();
-    const { playerName, playerAvatar } = get();
+    const { playerName, playerAvatar, authUser } = get();
     set({ roomId: cleanCode, isHost: false });
     socketService.joinRoom(cleanCode, {
       name: playerName,
       avatar: playerAvatar,
       clientPlayerId: getOrCreateClientId(),
+      profileBorder: authUser?.activeProfileBorder || 'default',
+      usernameBorder: authUser?.activeUsernameBorder || 'default',
     });
   },
 
@@ -1595,6 +1700,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         socketService.reconnectRoom(activeMatch.roomId, activeMatch.clientPlayerId, {
           name: get().playerName,
           avatar: get().playerAvatar,
+          profileBorder: get().authUser?.activeProfileBorder || 'default',
+          usernameBorder: get().authUser?.activeUsernameBorder || 'default',
         });
       } else {
         const currentRoomId = get().roomId;
@@ -1678,6 +1785,8 @@ export const useGameStore = create<GameState>((set, get) => ({
               socketId: socketId,
               name: get().playerName,
               avatar: get().playerAvatar,
+              profileBorder: get().authUser?.activeProfileBorder || 'default',
+              usernameBorder: get().authUser?.activeUsernameBorder || 'default',
               isHost: true,
             },
           ],
@@ -1765,6 +1874,20 @@ export const useGameStore = create<GameState>((set, get) => ({
           } else {
             soundFx.playDrinkPenalty();
           }
+
+          // Record multiplayer game result
+          const isHumanWinner = syncData.winner.id === syncData.myPlayerId;
+          const myPlayer = syncData.players.find((p) => p.id === syncData.myPlayerId);
+          const opponentsList = syncData.players.filter((p) => p.id !== syncData.myPlayerId).map((p) => p.name);
+          const pointsEarned = isHumanWinner ? (syncData.winner.roundScore || 50) : 10;
+          get().recordGameResult({
+            gameMode: 'multiplayer',
+            result: isHumanWinner ? 'win' : 'loss',
+            pointsEarned,
+            roundScore: isHumanWinner ? (syncData.winner.roundScore || 50) : 0,
+            opponents: opponentsList,
+            cardsLeft: myPlayer ? myPlayer.hand.length : 0,
+          });
         }
 
         if (syncData.roomId && syncData.gamePhase === 'playing') {
@@ -1884,5 +2007,221 @@ export const useGameStore = create<GameState>((set, get) => ({
         ),
       }));
     });
+  },
+
+  // --- Auth & Profile Actions ---
+  initAuth: async () => {
+    set({ isAuthLoading: true });
+    try {
+      const user = await apiService.getMe();
+      if (user) {
+        set({
+          authUser: user,
+          authToken: apiService.getToken(),
+          playerName: user.username,
+          playerAvatar: user.avatar,
+        });
+        const history = await apiService.getHistory();
+        set({ matchHistory: history });
+      } else {
+        set({ authUser: null, authToken: null });
+      }
+    } catch {
+      set({ authUser: null, authToken: null });
+    } finally {
+      set({ isAuthLoading: false });
+    }
+  },
+
+  login: async (identifier: string, password: string) => {
+    set({ isAuthLoading: true });
+    try {
+      const { user, token } = await apiService.login({ identifier, password });
+      set({
+        authUser: user,
+        authToken: token,
+        playerName: user.username,
+        playerAvatar: user.avatar,
+        isAuthModalOpen: false,
+      });
+      get().setPlayerProfile(user.username, user.avatar);
+      const history = await apiService.getHistory();
+      set({ matchHistory: history });
+    } finally {
+      set({ isAuthLoading: false });
+    }
+  },
+
+  registerUser: async (username: string, email: string, password: string, avatar?: string) => {
+    set({ isAuthLoading: true });
+    try {
+      const { user, token } = await apiService.register({ username, email, password, avatar });
+      set({
+        authUser: user,
+        authToken: token,
+        playerName: user.username,
+        playerAvatar: user.avatar,
+        isAuthModalOpen: false,
+      });
+      get().setPlayerProfile(user.username, user.avatar);
+      set({ matchHistory: [] });
+    } finally {
+      set({ isAuthLoading: false });
+    }
+  },
+
+  logout: async () => {
+    await apiService.logout();
+    set({
+      authUser: null,
+      authToken: null,
+      matchHistory: [],
+      isProfileModalOpen: false,
+    });
+  },
+
+  openAuthModal: (tab: 'login' | 'register' = 'login') => {
+    set({ isAuthModalOpen: true, authModalTab: tab });
+  },
+
+  closeAuthModal: () => {
+    set({ isAuthModalOpen: false });
+  },
+
+  openProfileModal: () => {
+    set({ isProfileModalOpen: true });
+    get().fetchMatchHistory();
+  },
+
+  closeProfileModal: () => {
+    set({ isProfileModalOpen: false });
+  },
+
+  fetchMatchHistory: async () => {
+    if (!get().authUser) return;
+    try {
+      const history = await apiService.getHistory();
+      set({ matchHistory: history });
+    } catch {}
+  },
+
+  recordGameResult: async (matchData) => {
+    const { authUser } = get();
+    set({
+      lastGamePointsGained: matchData.pointsEarned,
+      lastGameSaved: Boolean(authUser),
+    });
+
+    if (!authUser) return;
+
+    try {
+      const result = await apiService.saveMatchHistory(matchData);
+      if (result) {
+        set((state) => ({
+          authUser: result.user,
+          lastGameSaved: true,
+          matchHistory: [result.historyItem, ...state.matchHistory],
+        }));
+      }
+    } catch (err) {
+      console.warn('[Store] Gagal menyimpan riwayat pertandingan:', err);
+    }
+  },
+
+  // --- Shop Actions ---
+  openShopModal: () => {
+    set({ isShopModalOpen: true });
+    get().fetchShopCatalog();
+  },
+
+  closeShopModal: () => {
+    set({ isShopModalOpen: false });
+  },
+
+  fetchShopCatalog: async () => {
+    try {
+      const catalog = await apiService.getShopCatalog();
+      if (catalog) {
+        set({ shopCatalog: catalog });
+      }
+    } catch {}
+  },
+
+  buyShopItem: async (itemType, itemId) => {
+    try {
+      const updatedUser = await apiService.buyShopItem(itemType, itemId);
+      set((state) => ({
+        authUser: updatedUser,
+        players: state.players.map((p) => {
+          const isMe = state.myPlayerId ? p.id === state.myPlayerId : !p.isBot;
+          if (isMe) {
+            return {
+              ...p,
+              profileBorder: updatedUser.activeProfileBorder || 'default',
+              usernameBorder: updatedUser.activeUsernameBorder || 'default',
+            };
+          }
+          return p;
+        }),
+      }));
+    } catch (err: any) {
+      throw err;
+    }
+  },
+
+  equipShopItem: async (itemType, itemId) => {
+    try {
+      const updatedUser = await apiService.equipShopItem(itemType, itemId);
+      set((state) => ({
+        authUser: updatedUser,
+        players: state.players.map((p) => {
+          const isMe = state.myPlayerId ? p.id === state.myPlayerId : !p.isBot;
+          if (isMe) {
+            return {
+              ...p,
+              profileBorder: updatedUser.activeProfileBorder || 'default',
+              usernameBorder: updatedUser.activeUsernameBorder || 'default',
+            };
+          }
+          return p;
+        }),
+      }));
+    } catch (err: any) {
+      throw err;
+    }
+  },
+
+  // --- Leaderboard Actions ---
+  openLeaderboardModal: () => {
+    set({ isLeaderboardOpen: true });
+    get().fetchLeaderboard(get().leaderboardCategory);
+  },
+
+  closeLeaderboardModal: () => {
+    set({ isLeaderboardOpen: false });
+  },
+
+  setLeaderboardCategory: (category: LeaderboardCategory) => {
+    set({ leaderboardCategory: category });
+    get().fetchLeaderboard(category);
+  },
+
+  fetchLeaderboard: async (category?: LeaderboardCategory) => {
+    const targetCat = category || get().leaderboardCategory || 'points';
+    set({ isLeaderboardLoading: true });
+    try {
+      const res = await apiService.getLeaderboard(targetCat, 50);
+      if (res && res.success) {
+        set({
+          leaderboardEntries: res.leaderboard || [],
+          currentUserLeaderboardRank: res.currentUserRank || null,
+          isLeaderboardLoading: false,
+        });
+      } else {
+        set({ isLeaderboardLoading: false });
+      }
+    } catch {
+      set({ isLeaderboardLoading: false });
+    }
   },
 }));

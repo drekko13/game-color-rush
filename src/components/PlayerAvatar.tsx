@@ -58,11 +58,57 @@ const EMOJI_MAP: Record<string, AvatarId> = {
   '🌸': 'sparkles',
 };
 
+export const PROFILE_BORDER_STYLES: Record<string, { ringClass: string; glowClass: string; label: string; badge: string }> = {
+  default: {
+    ringClass: 'ring-2 ring-white/20',
+    glowClass: '',
+    label: 'Classic Standard',
+    badge: '⚪',
+  },
+  neon_cyber: {
+    ringClass: 'ring-2 ring-cyan-400',
+    glowClass: 'shadow-[0_0_16px_rgba(6,182,212,0.85)] ring-offset-1 ring-offset-slate-950',
+    label: 'Cyber Matrix',
+    badge: '⚡',
+  },
+  toxic_biohazard: {
+    ringClass: 'ring-2 ring-lime-400',
+    glowClass: 'shadow-[0_0_16px_rgba(163,230,53,0.85)] ring-offset-1 ring-offset-slate-950',
+    label: 'Toxic Biohazard',
+    badge: '☣️',
+  },
+  flame_inferno: {
+    ringClass: 'ring-2 ring-rose-500',
+    glowClass: 'shadow-[0_0_18px_rgba(244,63,94,0.9)] ring-offset-1 ring-offset-slate-950',
+    label: 'Inferno Flare',
+    badge: '🔥',
+  },
+  cosmic_nebula: {
+    ringClass: 'ring-2 ring-purple-400',
+    glowClass: 'shadow-[0_0_18px_rgba(192,132,252,0.9)] ring-offset-1 ring-offset-slate-950',
+    label: 'Cosmic Void',
+    badge: '🌌',
+  },
+  golden_royalty: {
+    ringClass: 'ring-2 ring-amber-300',
+    glowClass: 'shadow-[0_0_20px_rgba(252,211,77,0.95)] ring-offset-1 ring-offset-slate-950',
+    label: 'Royal Sovereign',
+    badge: '👑',
+  },
+  rainbow_rgb: {
+    ringClass: 'ring-2 ring-pink-400 animate-pulse',
+    glowClass: 'shadow-[0_0_22px_rgba(244,63,94,0.85)] ring-offset-1 ring-offset-slate-950',
+    label: 'Chroma RGB Wave',
+    badge: '🌈',
+  },
+};
+
 interface PlayerAvatarProps {
   avatarId?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   border?: boolean;
+  borderId?: string;
 }
 
 export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
@@ -70,6 +116,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
   size = 'md',
   className = '',
   border = true,
+  borderId = 'default',
 }) => {
   const normalizedId: AvatarId =
     (EMOJI_MAP[avatarId] as AvatarId) ||
@@ -77,6 +124,8 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
 
   const option = AVATAR_OPTIONS.find((a) => a.id === normalizedId) || AVATAR_OPTIONS[0];
   const IconComponent = option.icon;
+
+  const borderStyle = PROFILE_BORDER_STYLES[borderId] || PROFILE_BORDER_STYLES.default;
 
   const sizeClasses = {
     xs: 'w-6 h-6 p-1 rounded-lg',
@@ -94,11 +143,15 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
     xl: 'w-7 h-7',
   }[size];
 
+  const ringStyle = border
+    ? borderId && borderId !== 'default'
+      ? `${borderStyle.ringClass} ${borderStyle.glowClass}`
+      : 'ring-2 ring-white/20'
+    : '';
+
   return (
     <div
-      className={`bg-gradient-to-tr ${option.gradient} flex items-center justify-center text-white shadow-md shrink-0 ${
-        border ? 'ring-2 ring-white/20' : ''
-      } ${sizeClasses} ${className}`}
+      className={`bg-gradient-to-tr ${option.gradient} flex items-center justify-center text-white shadow-md shrink-0 relative transition-all ${ringStyle} ${sizeClasses} ${className}`}
     >
       <IconComponent className={iconSizes} />
     </div>

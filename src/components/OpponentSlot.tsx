@@ -4,6 +4,7 @@ import type { Player, PlayerPosition } from '../types/game';
 import { useGameStore } from '../store/useGameStore';
 import { CardComponent } from './Card';
 import { PlayerAvatar } from './PlayerAvatar';
+import { UsernamePlate } from './UsernamePlate';
 import { Beer, AlertTriangle, Layers, Zap, Ban } from 'lucide-react';
 
 interface OpponentSlotProps {
@@ -17,9 +18,16 @@ export const OpponentSlot: React.FC<OpponentSlotProps> = ({
   position,
   isMobileTopRow = false,
 }) => {
-  const { currentTurnIndex, players, catchUncalledRush, rushCallGracePlayerId } =
+  const { currentTurnIndex, players, catchUncalledRush, rushCallGracePlayerId, myPlayerId, authUser } =
     useGameStore();
   const isTurn = players[currentTurnIndex]?.id === player.id;
+  const isMe = Boolean(
+    (myPlayerId && player.id === myPlayerId) ||
+    (!player.isBot && player.position === 'bottom')
+  );
+  const borderId = player.profileBorder || (isMe ? authUser?.activeProfileBorder : 'default');
+  const usernameBorder = player.usernameBorder || (isMe ? authUser?.activeUsernameBorder : 'default');
+
   const canCatch =
     rushCallGracePlayerId === player.id &&
     player.hand.length === 1 &&
@@ -71,52 +79,52 @@ export const OpponentSlot: React.FC<OpponentSlotProps> = ({
           isMobileTopRow ? 'flex-col' : 'flex-row'
         }`}
       >
-        {/* Animated Active Turn Aura */}
-        {isTurn && (
-          <motion.div
-            animate={{ scale: [1, 1.18, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ repeat: Infinity, duration: 1.4 }}
-            className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 blur-sm pointer-events-none"
-          />
-        )}
-
-        {/* Circular Avatar */}
-        <div
-          className={`relative w-10 h-10 md:w-14 md:h-14 rounded-full bg-slate-900 border-2 flex items-center justify-center shadow-xl transition-all overflow-hidden ${
-            isTurn
-              ? 'border-sky-400 ring-2 ring-sky-400/80 shadow-[0_0_20px_rgba(56,189,248,0.8)] scale-105'
-              : 'border-slate-700'
-          }`}
-        >
-          <PlayerAvatar avatarId={player.avatar} size="md" border={false} className="!w-full !h-full !rounded-none" />
-
-          {/* Disconnected / Waiting Indicator */}
-          {player.isDisconnected && (
-            <div className="absolute inset-0 bg-slate-950/85 flex items-center justify-center backdrop-blur-[1px] rounded-full">
-              <span className="text-[7px] sm:text-[8px] font-black text-amber-300 bg-amber-500/30 px-1 py-0.5 rounded border border-amber-400/50 animate-pulse text-center">
-                Menunggu
-              </span>
-            </div>
+        {/* Avatar Container with Turn Aura and Cosmetics */}
+        <div className="relative">
+          {/* Animated Active Turn Aura */}
+          {isTurn && (
+            <motion.div
+              animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
+              transition={{ repeat: Infinity, duration: 1.4 }}
+              className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 blur-sm pointer-events-none"
+            />
           )}
 
-          {/* Thinking Indicator */}
-          {player.isThinking && !player.isDisconnected && (
-            <div className="absolute -bottom-1 -right-1 flex space-x-0.5 bg-slate-950 px-1 py-0.5 rounded-full border border-sky-400/50 shadow">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-            </div>
-          )}
+          <div className="relative">
+            <PlayerAvatar
+              avatarId={player.avatar}
+              size={isMobileTopRow ? 'sm' : 'md'}
+              borderId={borderId}
+            />
 
-          {/* Drink Penalty Mug Badge */}
-          {player.drinkPenaltyCount > 0 && (
-            <div className="absolute -top-1.5 -right-1.5 bg-amber-500/90 text-slate-950 text-[9px] md:text-[10px] font-black px-1.5 py-0.2 rounded-full border border-amber-300 flex items-center shadow-md">
-              <Beer className="w-2.5 h-2.5 mr-0.5" />
-              <span>{player.drinkPenaltyCount}</span>
-            </div>
-          )}
+            {/* Disconnected / Waiting Indicator */}
+            {player.isDisconnected && (
+              <div className="absolute inset-0 bg-slate-950/85 flex items-center justify-center backdrop-blur-[1px] rounded-xl z-10">
+                <span className="text-[7px] sm:text-[8px] font-black text-amber-300 bg-amber-500/30 px-1 py-0.5 rounded border border-amber-400/50 animate-pulse text-center">
+                  Menunggu
+                </span>
+              </div>
+            )}
+
+            {/* Thinking Indicator */}
+            {player.isThinking && !player.isDisconnected && (
+              <div className="absolute -bottom-1 -right-1 flex space-x-0.5 bg-slate-950 px-1 py-0.5 rounded-full border border-sky-400/50 shadow z-10">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+              </div>
+            )}
+
+            {/* Drink Penalty Mug Badge */}
+            {player.drinkPenaltyCount > 0 && (
+              <div className="absolute -top-1.5 -right-1.5 bg-amber-500/90 text-slate-950 text-[9px] md:text-[10px] font-black px-1.5 py-0.2 rounded-full border border-amber-300 flex items-center shadow-md z-10">
+                <Beer className="w-2.5 h-2.5 mr-0.5" />
+                <span>{player.drinkPenaltyCount}</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Bot Name & Hand Count (Desktop Side-by-Side or Mobile Below Avatar) */}
+        {/* Bot / Player Name & Hand Count (Desktop Side-by-Side or Mobile Below Avatar) */}
         <div
           className={`flex flex-col ${
             isMobileTopRow
@@ -127,9 +135,11 @@ export const OpponentSlot: React.FC<OpponentSlotProps> = ({
           }`}
         >
           <div className="flex items-center space-x-1 justify-center">
-            <span className="font-bold text-[11px] md:text-sm text-slate-200 tracking-tight whitespace-nowrap">
-              {player.name}
-            </span>
+            <UsernamePlate
+              username={player.name}
+              borderId={usernameBorder}
+              size="sm"
+            />
             {isTurn && (
               <span className="text-[8px] md:text-[9px] font-black px-1.5 py-0.5 rounded bg-sky-400 text-slate-950 flex items-center space-x-0.5 shadow-[0_0_12px_rgba(56,189,248,0.9)] animate-pulse shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />

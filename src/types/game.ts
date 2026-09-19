@@ -34,6 +34,8 @@ export interface Player {
   isAway?: boolean;
   isLeft?: boolean;
   isHost?: boolean;
+  profileBorder?: string;
+  usernameBorder?: string;
 }
 
 export type TurnDirection = 'clockwise' | 'counter-clockwise';
@@ -48,6 +50,8 @@ export interface RoomLobbyPlayer {
   avatar: string;
   isHost: boolean;
   clientPlayerId?: string;
+  profileBorder?: string;
+  usernameBorder?: string;
 }
 
 export interface RoomLobbyState {
@@ -151,3 +155,81 @@ export const COLOR_HEX: Record<CardColor, { bg: string; border: string; glow: st
     text: '#ffffff',
   },
 };
+
+export interface UserTier {
+  name: string;
+  badge: string;
+  color: string;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  avatar: string;
+  totalPoints: number;
+  allTimePoints?: number;
+  totalMatches: number;
+  wins: number;
+  losses: number;
+  createdAt: string;
+  tier: UserTier;
+  winRate: number;
+  unlockedProfileBorders: string[];
+  activeProfileBorder: string;
+  unlockedUsernameBorders: string[];
+  activeUsernameBorder: string;
+}
+
+export interface MatchHistoryItem {
+  id: string;
+  userId: string;
+  playedAt: string;
+  gameMode: 'solo' | 'multiplayer';
+  result: 'win' | 'loss';
+  pointsEarned: number;
+  roundScore?: number;
+  opponents: string[];
+  cardsLeft: number;
+}
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  gradient: string;
+  badge: string;
+}
+
+export interface ShopCatalog {
+  profileBorders: ShopItem[];
+  usernameBorders: ShopItem[];
+}
+
+export type LeaderboardCategory = 'points' | 'winRate';
+
+export interface LeaderboardEntry {
+  rank: number;
+  id: string;
+  username: string;
+  avatar: string;
+  activeProfileBorder?: string;
+  activeUsernameBorder?: string;
+  tier: UserTier;
+  totalPoints: number;
+  allTimePoints?: number;
+  totalMatches: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  createdAt?: string;
+}
+
+export interface LeaderboardResponse {
+  success: boolean;
+  category: LeaderboardCategory;
+  leaderboard: LeaderboardEntry[];
+  currentUserRank: LeaderboardEntry | null;
+  totalPlayers: number;
+}

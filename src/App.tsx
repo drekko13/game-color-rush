@@ -3,6 +3,10 @@ import { useGameStore } from './store/useGameStore';
 import { useIsMobile } from './hooks/useIsMobile';
 import { MainMenuScreen } from './components/MainMenuScreen';
 import { MultiplayerModal } from './components/MultiplayerModal';
+import { AuthModal } from './components/AuthModal';
+import { ProfileHistoryModal } from './components/ProfileHistoryModal';
+import { ShopModal } from './components/ShopModal';
+import { LeaderboardModal } from './components/LeaderboardModal';
 import { HeaderBar } from './components/HeaderBar';
 import { OpponentSlot } from './components/OpponentSlot';
 import { TableCenter } from './components/TableCenter';
@@ -16,12 +20,13 @@ import { WildDraw4ChallengeModal } from './components/WildDraw4ChallengeModal';
 import { socketService } from './services/socket';
 
 export const App: React.FC = () => {
-  const { currentScreen, players, screenShake, initMultiplayerSocket } = useGameStore();
+  const { currentScreen, players, screenShake, initMultiplayerSocket, initAuth } = useGameStore();
   const isMobile = useIsMobile(768);
 
   useEffect(() => {
     initMultiplayerSocket();
-  }, [initMultiplayerSocket]);
+    initAuth();
+  }, [initMultiplayerSocket, initAuth]);
 
   // Handle Tab Switch (isAway / Menunggu)
   useEffect(() => {
@@ -48,6 +53,10 @@ export const App: React.FC = () => {
         {currentScreen === 'lobby' && (
           <MultiplayerModal isOpen={true} onClose={() => {}} />
         )}
+        <AuthModal />
+        <ProfileHistoryModal />
+        <ShopModal />
+        <LeaderboardModal />
       </>
     );
   }
@@ -130,6 +139,10 @@ export const App: React.FC = () => {
       <RushQuickTimePrompt />
       <WildDraw4ChallengeModal />
       <VictoryModal />
+      <AuthModal />
+      <ProfileHistoryModal />
+      <ShopModal />
+      <LeaderboardModal />
     </div>
   );
 };

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
+import { PlayerAvatar } from './PlayerAvatar';
+import { UsernamePlate } from './UsernamePlate';
 import {
   Volume2,
   VolumeX,
@@ -10,6 +12,9 @@ import {
   ScrollText,
   Users,
   Home,
+  LogIn,
+  ShoppingBag,
+  Trophy,
 } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { RulesModal } from './RulesModal';
@@ -26,6 +31,11 @@ export const HeaderBar: React.FC = () => {
     returnToMainMenu,
     gameMode,
     roomId,
+    authUser,
+    openAuthModal,
+    openProfileModal,
+    openShopModal,
+    openLeaderboardModal,
   } = useGameStore();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -37,33 +47,33 @@ export const HeaderBar: React.FC = () => {
 
   return (
     <>
-      <header className="w-full flex items-center justify-between px-3 md:px-4 py-2 z-30 bg-slate-950/40 backdrop-blur-md border-b border-white/5">
+      <header className="w-full flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 z-30 bg-slate-950/40 backdrop-blur-md border-b border-white/5">
         {/* Game Logo & Brand */}
-        <div className="flex items-center space-x-2 shrink-0">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
           <button
             onClick={() => {
               if (window.confirm('Kembali ke Menu Utama?')) {
                 returnToMainMenu();
               }
             }}
-            className="flex items-center space-x-2 text-left group cursor-pointer"
+            className="flex items-center space-x-1.5 sm:space-x-2 text-left group cursor-pointer shrink-0"
             title="Klik untuk ke Menu Utama"
           >
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-600 via-sky-500 to-amber-500 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.5)] p-0.5 group-hover:scale-105 transition-transform">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-rose-600 via-sky-500 to-amber-500 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.5)] p-0.5 group-hover:scale-105 transition-transform shrink-0">
               <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center font-black text-xs text-white">
                 CR
               </div>
             </div>
             <div>
-              <h1 className="font-black text-sm md:text-base tracking-wider bg-gradient-to-r from-rose-400 via-sky-300 to-amber-300 bg-clip-text text-transparent">
+              <h1 className="font-black text-xs sm:text-base tracking-wider bg-gradient-to-r from-rose-400 via-sky-300 to-amber-300 bg-clip-text text-transparent">
                 COLORRUSH
               </h1>
             </div>
           </button>
         </div>
 
-        {/* Toolbar Buttons: On mobile, ONLY Info Room & Pengaturan are visible. Other secondary buttons are shown on desktop */}
-        <div className="flex items-center space-x-2">
+        {/* Toolbar Buttons */}
+        <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
           {/* Desktop Only: Home / Menu Utama Button */}
           <button
             onClick={() => {
@@ -82,22 +92,74 @@ export const HeaderBar: React.FC = () => {
             <span>Menu</span>
           </button>
 
+          {/* Papan Peringkat (Leaderboard) Button */}
+          <button
+            onClick={openLeaderboardModal}
+            title="Buka Papan Peringkat (Leaderboard Juara #1-3)"
+            className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Peringkat</span>
+          </button>
+
+          {/* Toko Poin (Store) Button */}
+          <button
+            onClick={openShopModal}
+            title="Buka Toko Poin (Beli Border Profile & Username)"
+            className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
+          >
+            <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Toko</span>
+          </button>
+
+          {/* Account Profile / Login Button (Visible on Mobile & Desktop) */}
+          {authUser ? (
+            <button
+              onClick={openProfileModal}
+              title="Lihat Profil, Statistik & Riwayat Poin"
+              className="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
+            >
+              <PlayerAvatar
+                avatarId={authUser.avatar}
+                size="xs"
+                borderId={authUser.activeProfileBorder || 'default'}
+              />
+              <UsernamePlate
+                username={authUser.username}
+                borderId={authUser.activeUsernameBorder || 'default'}
+                className="hidden md:inline text-xs truncate max-w-[80px]"
+              />
+              <span className="px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                {authUser.totalPoints} Pts
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={() => openAuthModal('login')}
+              title="Masuk / Daftar Akun untuk Menyimpan Poin & Riwayat"
+              className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:brightness-110 text-white transition-all flex items-center space-x-1 text-xs font-black shadow-md cursor-pointer shrink-0"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Masuk</span>
+            </button>
+          )}
+
           {/* ESSENTIAL: Info Room / Multiplayer Button (Visible on Mobile & Desktop) */}
           <button
             onClick={() => setIsMultiplayerOpen(true)}
             title="Informasi Room & Pemain"
-            className={`px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1.5 text-xs font-black shadow-md cursor-pointer ${
+            className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl transition-all flex items-center space-x-1 text-xs font-black shadow-md cursor-pointer shrink-0 ${
               isInRoom
                 ? 'bg-gradient-to-r from-sky-600 to-indigo-600 text-white border border-sky-400/50 shadow-[0_0_15px_rgba(2,132,199,0.5)]'
                 : 'bg-slate-900 hover:bg-slate-800 text-sky-400 border border-sky-500/30'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>
+            <Users className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">
               {isInRoom ? `Room ${roomId || '...'}` : 'Info Room'}
             </span>
             {isInRoom && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
             )}
           </button>
 
@@ -165,9 +227,9 @@ export const HeaderBar: React.FC = () => {
           <button
             onClick={() => setIsSettingsOpen(true)}
             title="Pengaturan Game (Audio, Party Mode, AI Speed, Keluar Room)"
-            className="px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-white/10 hover:border-white/25 transition-all flex items-center space-x-1.5 text-xs font-bold shadow cursor-pointer"
+            className="px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-white/10 hover:border-white/25 transition-all flex items-center space-x-1 text-xs font-bold shadow cursor-pointer shrink-0"
           >
-            <Settings className="w-4 h-4 text-sky-400" />
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400" />
             <span className="hidden sm:inline">Pengaturan</span>
           </button>
         </div>

@@ -2,8 +2,9 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useGameStore } from '../store/useGameStore';
-import { Trophy, RotateCcw, Beer, Skull, Home, CheckCircle2, Clock, Users } from 'lucide-react';
+import { Trophy, RotateCcw, Beer, Skull, Home, CheckCircle2, Clock, Users, ShoppingBag } from 'lucide-react';
 import { PlayerAvatar } from './PlayerAvatar';
+import { UsernamePlate } from './UsernamePlate';
 
 export const VictoryModal: React.FC = () => {
   const {
@@ -21,6 +22,10 @@ export const VictoryModal: React.FC = () => {
     returnToMainMenu,
     rematchReadyPlayers,
     toggleRematchReady,
+    authUser,
+    openAuthModal,
+    openShopModal,
+    lastGamePointsGained,
   } = useGameStore();
 
   const isGameOver = gamePhase === 'game_over';
@@ -161,10 +166,22 @@ export const VictoryModal: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center space-x-2">
-                    <PlayerAvatar avatarId={p.avatar} size="xs" />
+                    <PlayerAvatar
+                      avatarId={p.avatar}
+                      size="xs"
+                      borderId={isMe && authUser ? authUser.activeProfileBorder : undefined}
+                    />
                     <div>
                       <div className="flex items-center space-x-1.5">
-                        <span className="text-xs font-bold block">{p.name}</span>
+                        {isMe && authUser ? (
+                          <UsernamePlate
+                            username={p.name}
+                            plateId={authUser.activeUsernameBorder || 'default'}
+                            size="sm"
+                          />
+                        ) : (
+                          <span className="text-xs font-bold block">{p.name}</span>
+                        )}
                         {isMe && (
                           <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-400/40">
                             KAMU
@@ -201,6 +218,52 @@ export const VictoryModal: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Points Saved / Login CTA Banner */}
+          {authUser ? (
+            <div className="mb-4 p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-400/30 flex items-center justify-between text-left">
+              <div className="flex items-center space-x-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-emerald-300">
+                    +{lastGamePointsGained} Poin Tersimpan!
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    Akun {authUser.username} • Total: {authUser.totalPoints} Pts ({authUser.tier?.name})
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 shrink-0">
+                <button
+                  onClick={() => openShopModal()}
+                  className="px-2 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-slate-950 font-black text-[10px] shadow flex items-center space-x-1 cursor-pointer"
+                  title="Belanjakan Poin di Toko"
+                >
+                  <ShoppingBag className="w-3 h-3" />
+                  <span>Toko</span>
+                </button>
+                <span className="text-base select-none">{authUser.tier?.badge || '⭐'}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4 p-2.5 rounded-2xl bg-amber-500/10 border border-amber-400/30 flex items-center justify-between text-left">
+              <div className="space-y-0.5">
+                <div className="text-xs font-bold text-amber-300 flex items-center space-x-1">
+                  <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>+{lastGamePointsGained} Poin Diperoleh!</span>
+                </div>
+                <p className="text-[10px] text-slate-400">Masuk untuk simpan riwayat & total poin ke akunmu.</p>
+              </div>
+              <button
+                onClick={() => openAuthModal('login')}
+                className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:brightness-110 text-white font-black text-[11px] uppercase tracking-wider shadow-md shrink-0 cursor-pointer"
+              >
+                Simpan Poin
+              </button>
+            </div>
+          )}
 
           {/* Multiplayer Rematch Readiness Panel */}
           {gameMode === 'multiplayer' && (
