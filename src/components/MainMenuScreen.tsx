@@ -254,14 +254,16 @@ export const MainMenuScreen: React.FC = () => {
                 <Crown className="w-3.5 h-3.5 mr-1 text-amber-400" />
                 Identitas Pemain Kamu
               </span>
-              <button
-                onClick={handleRandomizeName}
-                className="text-[10px] font-bold text-sky-400 hover:text-sky-300 flex items-center space-x-1"
-                title="Acak Nama & Avatar"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>Acak Profil</span>
-              </button>
+              {!authUser && (
+                <button
+                  onClick={handleRandomizeName}
+                  className="text-[10px] font-bold text-sky-400 hover:text-sky-300 flex items-center space-x-1"
+                  title="Acak Nama & Avatar"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Acak Profil</span>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center space-x-3">
