@@ -238,6 +238,20 @@ let wildDraw4BluffData: {
   matchingCards: Card[];
 } | null = null;
 
+export const generateRandomGuestProfile = () => {
+  const randomNum = Math.floor(Math.random() * 899 + 100);
+  const avatars = ['crown', 'flame', 'zap', 'bot', 'ghost', 'skull', 'shield', 'swords'];
+  const profile = {
+    name: `Player ${randomNum}`,
+    avatar: avatars[Math.floor(Math.random() * avatars.length)],
+  };
+  try {
+    sessionStorage.setItem('colorrush_name', profile.name);
+    sessionStorage.setItem('colorrush_avatar', profile.avatar);
+  } catch {}
+  return profile;
+};
+
 const getInitialProfile = () => {
   try {
     const savedName = sessionStorage.getItem('colorrush_name');
@@ -249,17 +263,7 @@ const getInitialProfile = () => {
       };
     }
   } catch {}
-  const randomNum = Math.floor(Math.random() * 89 + 10);
-  const avatars = ['crown', 'flame', 'zap', 'bot', 'ghost', 'skull', 'shield', 'swords'];
-  const profile = {
-    name: `Player ${randomNum}`,
-    avatar: avatars[Math.floor(Math.random() * avatars.length)],
-  };
-  try {
-    sessionStorage.setItem('colorrush_name', profile.name);
-    sessionStorage.setItem('colorrush_avatar', profile.avatar);
-  } catch {}
-  return profile;
+  return generateRandomGuestProfile();
 };
 
 const defaultProfile = getInitialProfile();
@@ -2072,9 +2076,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   logout: async () => {
     await apiService.logout();
+    const guestProfile = generateRandomGuestProfile();
+    get().setPlayerProfile(guestProfile.name, guestProfile.avatar);
     set({
       authUser: null,
       authToken: null,
+      playerName: guestProfile.name,
+      playerAvatar: guestProfile.avatar,
       matchHistory: [],
       isProfileModalOpen: false,
     });
