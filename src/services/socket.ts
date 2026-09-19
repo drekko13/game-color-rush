@@ -18,7 +18,8 @@ class SocketService {
       ? `${window.location.protocol}//${window.location.hostname}:9001`
       : 'http://localhost:9001';
 
-    const serverUrl = (import.meta.env.VITE_SERVER_URL as string) || defaultServerUrl;
+    const rawServerUrl = (import.meta.env.VITE_SERVER_URL as string) || defaultServerUrl;
+    const serverUrl = (rawServerUrl || '').trim().replace(/\/+$/, '');
 
     this.socket = io(serverUrl, {
       autoConnect: true,

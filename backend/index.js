@@ -51,6 +51,14 @@ try {
 
 const PORT = process.env.PORT || 9001;
 
+// Normalize multiple slashes in URLs (e.g. //api/auth/register -> /api/auth/register)
+app.use((req, res, next) => {
+  if (req.url && req.url.includes('//')) {
+    req.url = req.url.replace(/\/+/g, '/');
+  }
+  next();
+});
+
 // Health check endpoint (buka http://IP:9001 untuk verifikasi server berjalan)
 app.use(express.json());
 

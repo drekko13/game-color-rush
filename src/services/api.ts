@@ -16,7 +16,9 @@ const defaultServerUrl =
     ? `${window.location.protocol}//${window.location.hostname}:9001`
     : 'http://localhost:9001';
 
-const API_BASE_URL = (import.meta.env.VITE_SERVER_URL as string) || defaultServerUrl;
+const rawServerUrl =
+  (import.meta.env.VITE_SERVER_URL as string) || defaultServerUrl;
+const API_BASE_URL = (rawServerUrl || '').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'colorrush_token';
 
 class ApiService {
@@ -57,6 +59,25 @@ class ApiService {
     return headers;
   }
 
+  private async parseJsonResponse<T>(res: Response, defaultError: string): Promise<T> {
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      if (res.status === 404) {
+        throw new Error('Endpoint API tidak ditemukan (404). Periksa koneksi backend.');
+      }
+      if (res.status === 502 || res.status === 503 || res.status === 504) {
+        throw new Error(`Server backend tidak merespons (HTTP ${res.status}). Pastikan backend di aaPanel aktif.`);
+      }
+      throw new Error(`Respons server tidak valid (HTTP ${res.status}).`);
+    }
+
+    try {
+      return await res.json();
+    } catch {
+      throw new Error(defaultError);
+    }
+  }
+
   // Register new account
   public async register(payload: {
     username: string;
@@ -64,13 +85,24 @@ class ApiService {
     password: string;
     avatar?: string;
   }): Promise<{ user: UserProfile; token: string }> {
-    const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      throw new Error(err?.message || 'Tidak dapat terhubung ke server backend.');
+    }
 
-    const data = await res.json();
+    const data = await this.parseJsonResponse<{
+      success: boolean;
+      error?: string;
+      user: UserProfile;
+      token: string;
+    }>(res, 'Pendaftaran gagal. Silakan coba lagi.');
+
     if (!res.ok || !data.success) {
       throw new Error(data.error || 'Pendaftaran gagal. Silakan coba lagi.');
     }
@@ -84,13 +116,24 @@ class ApiService {
     identifier: string;
     password: string;
   }): Promise<{ user: UserProfile; token: string }> {
-    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      throw new Error(err?.message || 'Tidak dapat terhubung ke server backend.');
+    }
 
-    const data = await res.json();
+    const data = await this.parseJsonResponse<{
+      success: boolean;
+      error?: string;
+      user: UserProfile;
+      token: string;
+    }>(res, 'Login gagal. Periksa username/email dan kata sandi.');
+
     if (!res.ok || !data.success) {
       throw new Error(data.error || 'Login gagal. Periksa username/email dan kata sandi.');
     }
@@ -110,7 +153,11 @@ class ApiService {
         headers: this.getHeaders(),
       });
 
-      const data = await res.json();
+      const data = await this.parseJsonResponse<{
+        success: boolean;
+        user: UserProfile;
+      }>(res, 'Gagal memuat profil.');
+
       if (!res.ok || !data.success) {
         // Invalid or expired token
         this.setToken(null);
@@ -241,7 +288,12 @@ class ApiService {
       body: JSON.stringify({ itemType, itemId }),
     });
 
-    const data = await res.json();
+    const data = await this.parseJsonResponse<{
+      success: boolean;
+      error?: string;
+      user: UserProfile;
+    }>(res, 'Gagal membeli item.');
+
     if (!res.ok || !data.success) {
       throw new Error(data.error || 'Gagal membeli item.');
     }
@@ -260,7 +312,12 @@ class ApiService {
       body: JSON.stringify({ itemType, itemId }),
     });
 
-    const data = await res.json();
+    const data = await this.parseJsonResponse<{
+      success: boolean;
+      error?: string;
+      user: UserProfile;
+    }>(res, 'Gagal memasang item.');
+
     if (!res.ok || !data.success) {
       throw new Error(data.error || 'Gagal memasang item.');
     }
@@ -282,7 +339,11 @@ class ApiService {
         }
       );
 
-      const data = await res.json();
+      const data = await this.parseJsonResponse<LeaderboardResponse>(
+        res,
+        'Gagal memuat leaderboard.'
+      );
+
       if (!res.ok || !data.success) {
         return {
           success: false,
