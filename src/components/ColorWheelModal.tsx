@@ -65,13 +65,13 @@ export const ColorWheelModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md pt-safe pb-safe pl-safe pr-safe">
         <motion.div
           initial={{ scale: 0.3, opacity: 0, rotate: -45 }}
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
           exit={{ scale: 0.5, opacity: 0 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="relative flex flex-col items-center p-6 rounded-3xl bg-slate-900 border border-white/20 shadow-2xl max-w-sm w-full"
+          className="relative flex flex-col items-center p-4 sm:p-6 rounded-3xl bg-slate-900 border border-white/20 shadow-2xl max-w-sm w-full max-h-[90dvh] overflow-y-auto no-scrollbar"
         >
           <div className="absolute -inset-2 rounded-3xl bg-gradient-to-tr from-pink-500 via-sky-500 to-emerald-500 blur-xl opacity-30 pointer-events-none" />
 

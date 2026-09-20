@@ -71,6 +71,10 @@ interface GameState {
   playerAvatar: string;
   roomLobby: import('../types/game').RoomLobbyState | null;
   isHost: boolean;
+  isOnline: boolean;
+  isCheckingConnection: boolean;
+  setIsOnline: (online: boolean) => void;
+  setIsCheckingConnection: (checking: boolean) => void;
 
   // Visual & Penalty States
   penaltyState: PenaltyAnimationState | null;
@@ -179,6 +183,16 @@ interface GameState {
   closeLeaderboardModal: () => void;
   setLeaderboardCategory: (category: LeaderboardCategory) => void;
   fetchLeaderboard: (category?: LeaderboardCategory) => Promise<void>;
+
+  // About App Modal State
+  isAboutModalOpen: boolean;
+  openAboutModal: () => void;
+  closeAboutModal: () => void;
+
+  // Exit App Confirmation Modal State
+  isExitModalOpen: boolean;
+  openExitModal: () => void;
+  closeExitModal: () => void;
 }
 
 const INITIAL_PLAYERS: Omit<Player, 'hand'>[] = [
@@ -353,6 +367,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   playerAvatar: defaultProfile.avatar,
   roomLobby: null,
   isHost: false,
+  isOnline: true,
+  isCheckingConnection: true,
+  setIsOnline: (online: boolean) => set({ isOnline: online }),
+  setIsCheckingConnection: (checking: boolean) => set({ isCheckingConnection: checking }),
 
   penaltyState: null,
   screenShake: 'none',
@@ -391,6 +409,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   leaderboardEntries: [],
   currentUserLeaderboardRank: null,
   isLeaderboardLoading: false,
+
+  // About Modal Initial State
+  isAboutModalOpen: false,
+
+  // Exit App Modal Initial State
+  isExitModalOpen: false,
 
   initGame: () => {
     if (botTurnTimeout) clearTimeout(botTurnTimeout);
@@ -1574,6 +1598,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   joinRandomMatch: () => {
     get().initMultiplayerSocket();
     const { playerName, playerAvatar, authUser } = get();
+    set({ isSearchingMatch: true });
     socketService.joinRandomMatch({
       name: playerName,
       avatar: playerAvatar,
@@ -1698,6 +1723,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     socket.off('online_users_count');
 
     const handleConnect = () => {
+      set({ isOnline: true, isCheckingConnection: false });
       const activeMatch = getActiveMatch();
       if (activeMatch && activeMatch.roomId) {
         console.log('[Socket] Active match detected! Reconnecting to room:', activeMatch.roomId);
@@ -1718,6 +1744,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     };
 
     socket.on('connect', handleConnect);
+    socket.on('disconnect', () => {
+      set({ isOnline: false, isCheckingConnection: false });
+    });
+    socket.on('connect_error', () => {
+      set({ isOnline: false, isCheckingConnection: false });
+    });
     if (socket.connected) {
       handleConnect();
     }
@@ -2232,4 +2264,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({ isLeaderboardLoading: false });
     }
   },
+
+  // --- About Modal Actions ---
+  openAboutModal: () => set({ isAboutModalOpen: true }),
+  closeAboutModal: () => set({ isAboutModalOpen: false }),
+
+  // --- Exit App Modal Actions ---
+  openExitModal: () => set({ isExitModalOpen: true }),
+  closeExitModal: () => set({ isExitModalOpen: false }),
 }));

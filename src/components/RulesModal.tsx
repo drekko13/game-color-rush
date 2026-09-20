@@ -13,12 +13,13 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pt-safe pb-safe pl-safe pr-safe bg-slate-950/80 backdrop-blur-sm">
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="w-full max-w-xl max-h-[88vh] overflow-y-auto bg-slate-900 border border-white/15 rounded-3xl p-6 shadow-2xl relative no-scrollbar"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          className="w-full max-w-xl max-h-[88vh] overflow-y-auto bg-slate-900 border border-white/15 rounded-3xl p-6 shadow-xl relative no-scrollbar will-change-transform"
         >
           {/* Close button */}
           <button

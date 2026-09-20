@@ -338,3 +338,16 @@ class SoundEngine {
 }
 
 export const soundFx = new SoundEngine();
+
+// Pre-unlock AudioContext on first touch/click to eliminate tap lag
+if (typeof window !== 'undefined') {
+  const unlockAudio = () => {
+    try {
+      (soundFx as any).initCtx();
+    } catch {
+      // ignore
+    }
+  };
+  window.addEventListener('click', unlockAudio, { passive: true, once: true });
+  window.addEventListener('touchstart', unlockAudio, { passive: true, once: true });
+}

@@ -125,16 +125,16 @@ export const ShopModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-hidden">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 pt-safe pb-safe pl-safe pr-safe bg-slate-950/85 backdrop-blur-md overflow-hidden">
         <motion.div
-          initial={{ scale: 0.92, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.92, opacity: 0, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-          className="w-full max-w-2xl max-h-[92vh] bg-slate-900 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col relative overflow-hidden my-auto"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          className="w-full max-w-2xl max-h-[92vh] bg-slate-900 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col relative overflow-hidden my-auto will-change-transform"
         >
-          {/* Ambient top glow */}
-          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-gradient-to-tr from-amber-500/20 via-sky-500/20 to-purple-500/20 rounded-full blur-3xl pointer-events-none" />
+          {/* Ambient top glow (desktop only) */}
+          <div className="hidden md:block absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-gradient-to-tr from-amber-500/20 via-sky-500/20 to-purple-500/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Close button */}
           <button

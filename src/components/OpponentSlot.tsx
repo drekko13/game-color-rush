@@ -51,10 +51,12 @@ export const OpponentSlot: React.FC<OpponentSlotProps> = ({
       <AnimatePresence>
         {player.statusMessage && (
           <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.8 }}
+            initial={{ opacity: 0, y: isMobileTopRow ? -4 : 8, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className={`absolute -top-7 px-2.5 py-0.5 rounded-full text-[10px] md:text-[11px] font-black tracking-wider uppercase shadow-xl z-30 whitespace-nowrap flex items-center space-x-1 ${
+            className={`absolute ${
+              isMobileTopRow ? 'top-0 -translate-y-1/2' : '-top-7'
+            } px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] md:text-[11px] font-black tracking-wider uppercase shadow-xl z-30 whitespace-nowrap flex items-center space-x-1 ${
               player.statusMessage.includes('HALTED')
                 ? 'bg-rose-600 text-white animate-bounce'
                 : player.statusMessage.includes('RUSH')
@@ -63,10 +65,10 @@ export const OpponentSlot: React.FC<OpponentSlotProps> = ({
             }`}
           >
             {player.statusMessage.includes('RUSH') && (
-              <Zap className="w-3 h-3 fill-current" />
+              <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
             )}
             {player.statusMessage.includes('HALTED') && (
-              <Ban className="w-3 h-3" />
+              <Ban className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             )}
             <span>{player.statusMessage}</span>
           </motion.div>
@@ -128,45 +130,46 @@ export const OpponentSlot: React.FC<OpponentSlotProps> = ({
         <div
           className={`flex flex-col ${
             isMobileTopRow
-              ? 'items-center text-center mt-1'
+              ? 'items-center text-center mt-1 w-full max-w-[105px]'
               : position === 'right'
               ? 'order-first mr-2 ml-0 text-right'
               : 'text-left ml-2'
           }`}
         >
-          <div className="flex items-center space-x-1 justify-center">
+          <div className="flex items-center space-x-1 justify-center max-w-full">
             <UsernamePlate
               username={player.name}
               borderId={usernameBorder}
               size="sm"
+              className={isMobileTopRow ? 'truncate max-w-[65px] sm:max-w-[85px]' : ''}
             />
             {isTurn && (
-              <span className="text-[8px] md:text-[9px] font-black px-1.5 py-0.5 rounded bg-sky-400 text-slate-950 flex items-center space-x-0.5 shadow-[0_0_12px_rgba(56,189,248,0.9)] animate-pulse shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+              <span className="text-[7px] sm:text-[8px] md:text-[9px] font-black px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded bg-sky-400 text-slate-950 flex items-center space-x-0.5 shadow-[0_0_12px_rgba(56,189,248,0.9)] animate-pulse shrink-0">
+                <span className="w-1 h-1 rounded-full bg-white animate-ping" />
                 <span>GILIRAN</span>
               </span>
             )}
             {!player.isBot && (
               <span
-                className={`text-[8px] font-black px-1 py-0.2 rounded-sm flex items-center ${
+                className={`text-[7px] sm:text-[8px] font-black px-1 py-0.2 rounded-sm flex items-center shrink-0 ${
                   player.isDisconnected
                     ? 'bg-amber-500 text-slate-950'
                     : 'bg-emerald-500/90 text-slate-950'
                 }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-white mr-0.5 animate-pulse" />
+                <span className="w-1 h-1 rounded-full bg-white mr-0.5 animate-pulse" />
                 {player.isDisconnected ? 'MENUNGGU' : 'LIVE'}
               </span>
             )}
             {player.hasCalledRush && (
-              <span className="text-[8px] md:text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded-sm">
+              <span className="text-[7px] sm:text-[8px] md:text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded-sm shrink-0">
                 RUSH!
               </span>
             )}
           </div>
 
           {/* Compact Card Count Badge on Mobile */}
-          <div className="flex items-center space-x-1 mt-0.5 md:mt-0 text-[10px] md:text-xs text-slate-400 font-semibold bg-slate-950/60 md:bg-transparent px-1.5 py-0.5 md:p-0 rounded-full border md:border-0 border-white/10">
+          <div className="flex items-center space-x-1 mt-0.5 md:mt-0 text-[10px] md:text-xs text-slate-400 font-semibold bg-slate-950/60 md:bg-transparent px-1.5 py-0.5 md:p-0 rounded-full border md:border-0 border-white/10 shrink-0">
             <Layers className="w-2.5 h-2.5 text-sky-400 md:hidden" />
             <span>
               {player.hand.length} {player.hand.length === 1 ? 'card' : 'cards'}

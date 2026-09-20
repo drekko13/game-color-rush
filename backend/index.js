@@ -12,6 +12,10 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:4173',
   'http://127.0.0.1:5173',
+  'https://localhost',
+  'http://localhost',
+  'capacitor://localhost',
+  'ionic://localhost',
 ];
 if (process.env.VITE_FRONTEND_URL) ALLOWED_ORIGINS.push(process.env.VITE_FRONTEND_URL);
 

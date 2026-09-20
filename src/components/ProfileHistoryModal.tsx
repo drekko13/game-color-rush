@@ -69,7 +69,7 @@ export const ProfileHistoryModal: React.FC = () => {
   // If somehow not logged in, prompt to log in
   if (!authUser) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pt-safe pb-safe pl-safe pr-safe bg-slate-950/80 backdrop-blur-md">
         <div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center space-y-4 shadow-2xl">
           <Trophy className="w-12 h-12 text-amber-400 mx-auto animate-bounce" />
           <h3 className="text-xl font-black text-white">Belum Masuk Akun</h3>
@@ -126,16 +126,16 @@ export const ProfileHistoryModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-hidden">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 pt-safe pb-safe pl-safe pr-safe bg-slate-950/85 backdrop-blur-md overflow-hidden">
         <motion.div
-          initial={{ scale: 0.92, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.92, opacity: 0, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-          className="w-full max-w-xl max-h-[92vh] bg-slate-900 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col relative overflow-hidden my-auto"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          className="w-full max-w-xl max-h-[92vh] bg-slate-900 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col relative overflow-hidden my-auto will-change-transform"
         >
-          {/* Top ambient glow */}
-          <div className="absolute -top-28 left-1/2 -translate-x-1/2 w-80 h-80 bg-gradient-to-tr from-amber-500/20 via-rose-500/15 to-sky-500/20 rounded-full blur-3xl pointer-events-none" />
+          {/* Top ambient glow (desktop only) */}
+          <div className="hidden md:block absolute -top-28 left-1/2 -translate-x-1/2 w-80 h-80 bg-gradient-to-tr from-amber-500/20 via-rose-500/15 to-sky-500/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Close button */}
           <button
@@ -217,22 +217,26 @@ export const ProfileHistoryModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Tabs: Riwayat vs Avatar */}
-          <div className="flex items-center justify-between mb-3 shrink-0">
-            <div className="flex items-center space-x-1.5 p-1 rounded-xl bg-slate-950/60 border border-white/5">
+          {/* Tabs: Riwayat vs Avatar & Actions */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 mb-3 shrink-0">
+            {/* Tab Switcher Pills */}
+            <div className="flex items-center space-x-1 p-1 rounded-2xl bg-slate-950/80 border border-white/10 shrink-0">
               <button
                 onClick={() => {
                   soundFx.playCardDraw();
                   setActiveTab('history');
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
                   activeTab === 'history'
-                    ? 'bg-slate-800 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border border-amber-400/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <History className="w-3.5 h-3.5 text-amber-400" />
-                <span>Riwayat Pertandingan ({matchHistory.length})</span>
+                <History className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>
+                  <span className="sm:hidden">Riwayat ({matchHistory.length})</span>
+                  <span className="hidden sm:inline">Riwayat Pertandingan ({matchHistory.length})</span>
+                </span>
               </button>
 
               <button
@@ -240,46 +244,50 @@ export const ProfileHistoryModal: React.FC = () => {
                   soundFx.playCardDraw();
                   setActiveTab('avatar');
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
                   activeTab === 'avatar'
-                    ? 'bg-slate-800 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-sky-500/20 text-sky-300 border border-sky-400/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Award className="w-3.5 h-3.5 text-sky-400" />
-                <span>Ganti Avatar</span>
+                <Award className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <span>
+                  <span className="sm:hidden">Avatar</span>
+                  <span className="hidden sm:inline">Ganti Avatar</span>
+                </span>
               </button>
             </div>
 
-            <div className="flex items-center space-x-2">
+            {/* Quick Action Buttons */}
+            <div className="flex items-center justify-end space-x-1.5 shrink-0">
               <button
                 onClick={() => {
                   soundFx.playCardDraw();
                   closeProfileModal();
                   openShopModal();
                 }}
-                className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-slate-950 text-xs font-black transition-all flex items-center space-x-1.5 cursor-pointer shadow"
+                className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 text-slate-950 text-xs font-black transition-all flex items-center space-x-1.5 cursor-pointer shadow active:scale-95 shrink-0"
                 title="Buka Toko Kosmetik"
               >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Toko Kosmetik</span>
+                <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
+                <span>Toko</span>
               </button>
               <button
                 onClick={handleLogout}
-                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer active:scale-95 shrink-0"
                 title="Keluar dari Akun"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Keluar</span>
+                <LogOut className="w-3.5 h-3.5 shrink-0" />
+                <span>Keluar</span>
               </button>
             </div>
           </div>
 
           {/* TAB CONTENT: RIWAYAT PERTANDINGAN */}
           {activeTab === 'history' && (
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar min-h-[220px]">
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar min-h-[200px]">
               {matchHistory.length === 0 ? (
-                <div className="h-48 flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-slate-950/40 border border-dashed border-white/10 space-y-2">
+                <div className="h-44 sm:h-52 flex flex-col items-center justify-center text-center p-6 rounded-2xl bg-slate-950/40 border border-dashed border-white/10 space-y-2">
                   <div className="w-12 h-12 rounded-2xl bg-slate-800/60 flex items-center justify-center text-slate-500">
                     <Swords className="w-6 h-6" />
                   </div>
@@ -294,72 +302,78 @@ export const ProfileHistoryModal: React.FC = () => {
                   return (
                     <div
                       key={item.id}
-                      className={`p-3 rounded-2xl border transition-all flex items-center justify-between ${
+                      className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                         isWin
-                          ? 'bg-amber-500/10 border-amber-400/30 shadow-[0_0_10px_rgba(245,158,11,0.08)]'
-                          : 'bg-slate-950/60 border-white/5'
+                          ? 'bg-gradient-to-r from-amber-500/10 via-slate-900/90 to-slate-900/90 border-amber-400/30 shadow-[0_0_12px_rgba(245,158,11,0.08)]'
+                          : 'bg-slate-950/60 border-white/5 hover:border-white/10'
                       }`}
                     >
-                      <div className="flex items-center space-x-3">
+                      {/* Left: Icon Badge & Match Info */}
+                      <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0 flex-1">
                         <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 border ${
                             isWin
-                              ? 'bg-amber-500/20 border-amber-400/40 text-amber-300'
-                              : 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                              ? 'bg-amber-500/20 border-amber-400/40 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                              : 'bg-rose-500/15 border-rose-500/30 text-rose-400'
                           }`}
                         >
-                          {isWin ? <Trophy className="w-5 h-5" /> : <Shield className="w-5 h-5" />}
+                          {isWin ? <Trophy className="w-4 h-4 sm:w-5 sm:h-5" /> : <Shield className="w-4 h-4 sm:w-5 sm:h-5" />}
                         </div>
 
-                        <div>
-                          <div className="flex items-center space-x-2">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          {/* Row 1: Result Badge + Mode Tag + Timestamp */}
+                          <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                             <span
-                              className={`text-xs font-black uppercase tracking-wider ${
-                                isWin ? 'text-amber-300' : 'text-slate-300'
+                              className={`text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-md shrink-0 ${
+                                isWin
+                                  ? 'bg-amber-500/25 text-amber-300 border border-amber-400/40'
+                                  : 'bg-slate-800 text-slate-300 border border-white/10'
                               }`}
                             >
                               {isWin ? 'MENANG' : 'KALAH'}
                             </span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold flex items-center space-x-1">
+
+                            <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-300 font-semibold flex items-center space-x-1 shrink-0">
                               {item.gameMode === 'multiplayer' ? (
                                 <>
-                                  <Users className="w-2.5 h-2.5 mr-1 text-sky-400" />
+                                  <Users className="w-2.5 h-2.5 text-sky-400 shrink-0" />
                                   <span>Multiplayer</span>
                                 </>
                               ) : (
                                 <>
-                                  <Bot className="w-2.5 h-2.5 mr-1 text-emerald-400" />
+                                  <Bot className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
                                   <span>Solo vs Bot</span>
                                 </>
                               )}
                             </span>
+
+                            <span className="text-[10px] text-slate-500 flex items-center shrink-0">
+                              <Clock className="w-2.5 h-2.5 mr-1 text-slate-500 shrink-0" />
+                              <span>{formatRelativeTime(item.playedAt)}</span>
+                            </span>
                           </div>
 
-                          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center space-x-2">
-                            <span className="flex items-center">
-                              <Clock className="w-3 h-3 mr-1 text-slate-500" />
-                              {formatRelativeTime(item.playedAt)}
-                            </span>
-                            {item.opponents && item.opponents.length > 0 && (
-                              <span className="truncate max-w-[150px] sm:max-w-xs text-slate-400">
-                                Lawan: {item.opponents.join(', ')}
-                              </span>
-                            )}
-                          </div>
+                          {/* Row 2: Opponents List */}
+                          {item.opponents && item.opponents.length > 0 && (
+                            <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                              <span className="text-slate-500 font-semibold">Lawan:</span>{' '}
+                              <span className="text-slate-300">{item.opponents.join(', ')}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Points earned */}
-                      <div className="text-right shrink-0">
+                      {/* Right: Points earned */}
+                      <div className="text-right shrink-0 pl-2 border-l border-white/5">
                         <div
-                          className={`text-sm sm:text-base font-black ${
-                            isWin ? 'text-amber-400' : 'text-slate-400'
+                          className={`text-xs sm:text-sm md:text-base font-black tracking-tight ${
+                            isWin ? 'text-amber-300' : 'text-slate-400'
                           }`}
                         >
                           +{item.pointsEarned} Pts
                         </div>
-                        <div className="text-[10px] text-slate-500">
-                          {isWin ? 'Bonus Menang' : 'Partisipasi'}
+                        <div className="text-[9px] sm:text-[10px] text-slate-500">
+                          {isWin ? 'Bonus Juara' : 'Partisipasi'}
                         </div>
                       </div>
                     </div>

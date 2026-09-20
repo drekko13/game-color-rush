@@ -5,20 +5,9 @@ import type {
   LeaderboardCategory,
   LeaderboardResponse,
 } from '../types/game';
+import { getServerUrl } from '../config/server';
 
-const isDev =
-  typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1');
-
-const defaultServerUrl =
-  typeof window !== 'undefined' && window.location.hostname && !isDev
-    ? `${window.location.protocol}//${window.location.hostname}:9001`
-    : 'http://localhost:9001';
-
-const rawServerUrl =
-  (import.meta.env.VITE_SERVER_URL as string) || defaultServerUrl;
-const API_BASE_URL = (rawServerUrl || '').trim().replace(/\/+$/, '');
+const getApiBaseUrl = () => getServerUrl();
 const TOKEN_KEY = 'colorrush_token';
 
 class ApiService {
@@ -87,7 +76,9 @@ class ApiService {
   }): Promise<{ user: UserProfile; token: string }> {
     let res: Response;
     try {
-      res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      const url = `${getApiBaseUrl()}/api/auth/register`;
+      console.log('[API] Register request to:', url);
+      res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -118,7 +109,9 @@ class ApiService {
   }): Promise<{ user: UserProfile; token: string }> {
     let res: Response;
     try {
-      res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const url = `${getApiBaseUrl()}/api/auth/login`;
+      console.log('[API] Login request to:', url);
+      res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -148,7 +141,7 @@ class ApiService {
     if (!token) return null;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -175,7 +168,7 @@ class ApiService {
     const token = this.getToken();
     if (token) {
       try {
-        await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        await fetch(`${getApiBaseUrl()}/api/auth/logout`, {
           method: 'POST',
           headers: this.getHeaders(),
         });
@@ -191,7 +184,7 @@ class ApiService {
     avatar?: string;
     username?: string;
   }): Promise<UserProfile> {
-    const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/auth/profile`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(payload),
@@ -218,7 +211,7 @@ class ApiService {
     if (!token) return null; // Guest user, skip saving to backend
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/history`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/history`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(matchData),
@@ -243,7 +236,7 @@ class ApiService {
     if (!token) return [];
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/history?limit=${limit}`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/history?limit=${limit}`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -262,7 +255,7 @@ class ApiService {
   // Get shop catalog
   public async getShopCatalog(): Promise<ShopCatalog | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/shop/items`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/shop/items`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -282,7 +275,7 @@ class ApiService {
     itemType: 'profile_border' | 'username_border',
     itemId: string
   ): Promise<UserProfile> {
-    const res = await fetch(`${API_BASE_URL}/api/shop/buy`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/shop/buy`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ itemType, itemId }),
@@ -306,7 +299,7 @@ class ApiService {
     itemType: 'profile_border' | 'username_border',
     itemId: string
   ): Promise<UserProfile> {
-    const res = await fetch(`${API_BASE_URL}/api/shop/equip`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/shop/equip`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify({ itemType, itemId }),
@@ -332,7 +325,7 @@ class ApiService {
   ): Promise<LeaderboardResponse> {
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/leaderboard?sortBy=${category}&limit=${limit}`,
+        `${getApiBaseUrl()}/api/leaderboard?sortBy=${category}&limit=${limit}`,
         {
           method: 'GET',
           headers: this.getHeaders(),

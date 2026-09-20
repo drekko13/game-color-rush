@@ -17,15 +17,66 @@ import { MissileCards } from './components/MissileCards';
 import { VictoryModal } from './components/VictoryModal';
 import { RushQuickTimePrompt } from './components/RushQuickTimePrompt';
 import { WildDraw4ChallengeModal } from './components/WildDraw4ChallengeModal';
+import { AboutModal } from './components/AboutModal';
+import { ExitConfirmModal } from './components/ExitConfirmModal';
 import { socketService } from './services/socket';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
+import { checkNetworkConnectivity } from './services/network';
 
 export const App: React.FC = () => {
   const { currentScreen, players, screenShake, initMultiplayerSocket, initAuth } = useGameStore();
   const isMobile = useIsMobile(768);
 
   useEffect(() => {
-    initMultiplayerSocket();
+    let isMounted = true;
+
+    const performInitialConnectionCheck = async () => {
+      useGameStore.setState({ isCheckingConnection: true });
+
+      // Jika navigator secara tegas menyatakan offline
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (isMounted) {
+          useGameStore.setState({ isOnline: false, isCheckingConnection: false });
+        }
+        return;
+      }
+
+      // Cek konektivitas nyata ke backend server
+      const isConnected = await checkNetworkConnectivity(2500);
+      if (isMounted) {
+        useGameStore.setState({ isOnline: isConnected, isCheckingConnection: false });
+        if (isConnected) {
+          initMultiplayerSocket();
+        }
+      }
+    };
+
+    performInitialConnectionCheck();
     initAuth();
+
+    const handleOnline = async () => {
+      useGameStore.setState({ isCheckingConnection: true });
+      const isConnected = await checkNetworkConnectivity(2500);
+      useGameStore.setState({ isOnline: isConnected, isCheckingConnection: false });
+      if (isConnected) {
+        socketService.reconnect();
+        initMultiplayerSocket();
+      }
+    };
+
+    const handleOffline = () => {
+      useGameStore.setState({ isOnline: false, isCheckingConnection: false });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [initMultiplayerSocket, initAuth]);
 
   // Handle Tab Switch (isAway / Menunggu)
@@ -45,6 +96,70 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // Handle Android Hardware Back Button & Gesture Swipe Back
+  useEffect(() => {
+    const handleBackAction = () => {
+      const state = useGameStore.getState();
+
+      // 1. Jika modal keluar sedang terbuka, batalkan/tutup
+      if (state.isExitModalOpen) {
+        state.closeExitModal();
+        return;
+      }
+
+      // 2. Jika modal lain terbuka, tutup modal tersebut terlebih dahulu
+      if (state.isAboutModalOpen) {
+        state.closeAboutModal();
+        return;
+      }
+      if (state.isProfileModalOpen) {
+        state.closeProfileModal();
+        return;
+      }
+      if (state.isShopModalOpen) {
+        state.closeShopModal();
+        return;
+      }
+      if (state.isLeaderboardOpen) {
+        state.closeLeaderboardModal();
+        return;
+      }
+      if (state.isAuthModalOpen) {
+        state.closeAuthModal();
+        return;
+      }
+
+      // 3. Jika sedang di Menu Utama, tampilkan konfirmasi keluar aplikasi
+      if (state.currentScreen === 'menu') {
+        state.openExitModal();
+      }
+    };
+
+    // 1. Tangkap event dari MainActivity.java (onBackPressed gesture swipe & hardware back)
+    window.addEventListener('androidBackButton', handleBackAction);
+
+    // 2. Tangkap event dari Capacitor App Plugin jika aktif
+    let subListener: any = null;
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener('backButton', () => {
+        handleBackAction();
+      })
+        .then((sub) => {
+          subListener = sub;
+        })
+        .catch((err) => {
+          console.warn('[BackButton] CapApp.addListener warning:', err);
+        });
+    }
+
+    return () => {
+      window.removeEventListener('androidBackButton', handleBackAction);
+      if (subListener && typeof subListener.remove === 'function') {
+        subListener.remove();
+      }
+    };
+  }, []);
+
   // If on Main Menu or in Room Lobby, render MainMenuScreen (with MultiplayerModal overlay if in lobby)
   if (currentScreen === 'menu' || currentScreen === 'lobby') {
     return (
@@ -57,6 +172,8 @@ export const App: React.FC = () => {
         <ProfileHistoryModal />
         <ShopModal />
         <LeaderboardModal />
+        <AboutModal />
+        <ExitConfirmModal />
       </>
     );
   }
@@ -143,6 +260,8 @@ export const App: React.FC = () => {
       <ProfileHistoryModal />
       <ShopModal />
       <LeaderboardModal />
+      <AboutModal />
+      <ExitConfirmModal />
     </div>
   );
 };

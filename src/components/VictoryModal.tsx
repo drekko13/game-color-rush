@@ -85,13 +85,13 @@ export const VictoryModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md pt-safe pb-safe pl-safe pr-safe">
         <motion.div
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.8, opacity: 0 }}
           transition={{ type: 'spring', damping: 20, stiffness: 260 }}
-          className={`w-full max-w-md bg-slate-900 border-2 rounded-3xl p-6 text-center relative overflow-hidden ${
+          className={`w-full max-w-md max-h-[90dvh] overflow-y-auto no-scrollbar bg-slate-900 border-2 rounded-3xl p-4 sm:p-6 text-center relative ${
             isMeWinner
               ? 'border-amber-400/60 shadow-[0_0_50px_rgba(245,158,11,0.4)]'
               : 'border-rose-500/50 shadow-[0_0_50px_rgba(225,29,72,0.35)]'

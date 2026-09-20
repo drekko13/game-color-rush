@@ -67,17 +67,17 @@ export const PlayerHand: React.FC = () => {
   };
 
   return (
-    <div className="w-full relative flex flex-col items-center pb-1 md:pb-4 z-20">
+    <div className="w-full relative flex flex-col items-center pb-safe-nav md:pb-4 pl-safe pr-safe z-20 shrink-0">
       {/* Hand Action Controls Header */}
-      <div className="flex items-center justify-between w-full max-w-4xl px-2 md:px-3 mb-1 md:mb-2">
+      <div className="flex items-center justify-between w-full max-w-4xl px-2 md:px-3 mb-1 md:mb-2 shrink-0">
         {/* Rush Button & Card Count */}
-        <div className="flex items-center space-x-1.5 md:space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-1.5 md:space-x-2 shrink-0">
           <motion.button
-            whileHover={{ scale: 1.06 }}
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.94 }}
             onClick={() => callRush(humanPlayer.id)}
             disabled={humanPlayer.hasCalledRush}
-            className={`flex items-center space-x-1 px-2.5 md:px-4 py-1 md:py-1.5 rounded-full font-black text-[11px] md:text-sm tracking-wider uppercase shadow-lg transition-all ${
+            className={`flex items-center space-x-1 px-2.5 sm:px-3 md:px-4 py-1 md:py-1.5 rounded-full font-black text-[10px] sm:text-[11px] md:text-sm tracking-wider uppercase shadow-lg transition-all shrink-0 ${
               humanPlayer.hasCalledRush
                 ? 'bg-amber-500/30 text-amber-300 border border-amber-400/50 cursor-default'
                 : hand.length <= 2
@@ -85,29 +85,41 @@ export const PlayerHand: React.FC = () => {
                 : 'bg-slate-800/80 text-slate-300 hover:text-white border border-slate-700'
             }`}
           >
-            <Zap className={`w-3.5 h-3.5 md:w-4 md:h-4 ${hand.length <= 2 ? 'text-yellow-200 fill-yellow-200' : ''}`} />
+            <Zap className={`w-3 h-3 md:w-4 md:h-4 shrink-0 ${hand.length <= 2 ? 'text-yellow-200 fill-yellow-200' : ''}`} />
             <span>{humanPlayer.hasCalledRush ? 'UNO CALLED!' : 'SHOUT UNO!'}</span>
           </motion.button>
 
           {/* Cards Count Badge */}
-          <div className="text-[10px] md:text-xs font-bold text-slate-400 bg-slate-900/80 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full border border-white/10">
+          <div className="text-[10px] md:text-xs font-bold text-slate-400 bg-slate-900/80 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full border border-white/10 shrink-0">
             {hand.length} {hand.length === 1 ? 'Card' : 'Cards'}
           </div>
         </div>
 
         {/* Draw / Pass Controls */}
         {isMyTurn && gamePhase === 'playing' && (
-          <div className="flex items-center space-x-1.5 md:space-x-2">
+          <div className="flex items-center space-x-1 sm:space-x-1.5 md:space-x-2 shrink-0">
             <button
               onClick={() => drawCard(humanPlayer.id)}
-              className={`flex items-center space-x-1 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full text-white text-[11px] md:text-sm font-bold shadow-md transition-all cursor-pointer ${
+              className={`flex items-center space-x-1 px-2.5 sm:px-3 py-1 md:py-1.5 rounded-full text-white text-[10px] sm:text-[11px] md:text-sm font-bold shadow-md transition-all cursor-pointer shrink-0 ${
                 stackCount > 0
                   ? 'bg-gradient-to-r from-rose-600 via-red-500 to-amber-600 hover:brightness-110 shadow-[0_0_20px_rgba(225,29,72,0.6)] animate-pulse'
                   : 'bg-sky-600 hover:bg-sky-500'
               }`}
             >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>{stackCount > 0 ? `Ambil +${stackCount} Kartu (Stack)` : 'Draw Card (1)'}</span>
+              <PlusCircle className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" />
+              <span>
+                {stackCount > 0 ? (
+                  <>
+                    <span className="sm:hidden">Ambil +{stackCount}</span>
+                    <span className="hidden sm:inline">Ambil +{stackCount} Kartu (Stack)</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="sm:hidden">Ambil (1)</span>
+                    <span className="hidden sm:inline">Draw Card (1)</span>
+                  </>
+                )}
+              </span>
             </button>
           </div>
         )}
@@ -158,7 +170,7 @@ export const PlayerHand: React.FC = () => {
         /* Mobile Horizontal Snap-Scroll Ribbon Layout (Only mounted on mobile) */
         <div
           ref={scrollContainerRef}
-          className="flex w-full overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 px-3 items-center space-x-2.5 min-h-[145px]"
+          className="flex w-full overflow-x-auto no-scrollbar snap-x snap-mandatory py-1.5 px-3 items-center space-x-2.5 min-h-[140px] overscroll-x-contain touch-pan-x"
         >
           {hand.map((card) => {
             const playable = isCardPlayable(card);
@@ -185,12 +197,12 @@ export const PlayerHand: React.FC = () => {
 
       {/* Turn Helper Prompt */}
       {isMyTurn && stackCount > 0 && (
-        <div className="mt-0.5 text-[10px] md:text-[11px] text-rose-400 font-bold animate-pulse">
+        <div className="mt-0.5 text-[9px] sm:text-[10px] md:text-[11px] text-rose-400 font-bold animate-pulse text-center px-2">
           🔥 Tumpukan penalti +{stackCount} kartu aktif! Tumpuk kartu +2 / +4 atau klik &quot;Ambil Kartu&quot; untuk menerima penalti.
         </div>
       )}
       {isMyTurn && stackCount === 0 && !hasPlayableCard && (
-        <div className="mt-0.5 text-[10px] md:text-[11px] text-sky-400 font-semibold animate-pulse">
+        <div className="mt-0.5 text-[9px] sm:text-[10px] md:text-[11px] text-sky-400 font-semibold animate-pulse text-center px-2">
           Tidak ada kartu cocok! Ambil 1 kartu (Aturan Force Play: kartu cocok langsung dimainkan otomatis).
         </div>
       )}

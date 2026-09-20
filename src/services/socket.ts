@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { getServerUrl } from '../config/server';
 import type { CardColor } from '../types/game';
 
 class SocketService {
@@ -8,18 +9,7 @@ class SocketService {
   public init(): Socket {
     if (this.socket) return this.socket;
 
-    // Dev  → http://localhost:9001 (automatic)
-    // Prod → set VITE_SERVER_URL or defaults to current server IP/domain on port 9001
-    const isDev = typeof window !== 'undefined' && (
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1'
-    );
-    const defaultServerUrl = typeof window !== 'undefined' && window.location.hostname && !isDev
-      ? `${window.location.protocol}//${window.location.hostname}:9001`
-      : 'http://localhost:9001';
-
-    const rawServerUrl = (import.meta.env.VITE_SERVER_URL as string) || defaultServerUrl;
-    const serverUrl = (rawServerUrl || '').trim().replace(/\/+$/, '');
+    const serverUrl = getServerUrl();
 
     this.socket = io(serverUrl, {
       autoConnect: true,
@@ -38,7 +28,22 @@ class SocketService {
       console.log('[Socket] Disconnected from server');
     });
 
+    this.socket.on('connect_error', (err) => {
+      this.isConnected = false;
+      console.warn('[Socket] Connect error:', err.message);
+    });
+
     return this.socket;
+  }
+
+  public reconnect() {
+    if (this.socket) {
+      if (!this.socket.connected) {
+        this.socket.connect();
+      }
+    } else {
+      this.init();
+    }
   }
 
   public getSocket(): Socket {

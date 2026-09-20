@@ -62,7 +62,7 @@ export const LeaderboardModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 select-none">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 pt-safe pb-safe pl-safe pr-safe select-none">
         {/* Backdrop overlay */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -74,14 +74,14 @@ export const LeaderboardModal: React.FC = () => {
 
         {/* Modal Container */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.92, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 15 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden z-10"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-white/10 shadow-2xl overflow-hidden z-10 will-change-transform"
         >
-          {/* Ambient Lighting Accents */}
-          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+          {/* Ambient Lighting Accents (desktop only) */}
+          <div className="hidden md:block absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Modal Header */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-white/10 relative z-10 shrink-0">

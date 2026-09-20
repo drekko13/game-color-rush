@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ColorRush</string>
+    <string name="title_activity_main">ColorRush</string>
+    <string name="package_name">com.colorrush.game</string>
+    <string name="custom_url_scheme">com.colorrush.game</string>
+</resources>

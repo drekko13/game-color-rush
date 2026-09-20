@@ -21,13 +21,13 @@ export const WildDraw4ChallengeModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md pt-safe pb-safe pl-safe pr-safe">
         <motion.div
           initial={{ scale: 0.85, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.85, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-          className="w-full max-w-md bg-slate-900 border-2 border-rose-500/60 rounded-3xl p-6 text-center relative overflow-hidden shadow-[0_0_50px_rgba(225,29,72,0.45)]"
+          className="w-full max-w-md max-h-[90dvh] overflow-y-auto no-scrollbar bg-slate-900 border-2 border-rose-500/60 rounded-3xl p-4 sm:p-6 text-center relative shadow-[0_0_50px_rgba(225,29,72,0.45)]"
         >
           {/* Ambient Glow */}
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full bg-rose-600/30 blur-3xl pointer-events-none" />

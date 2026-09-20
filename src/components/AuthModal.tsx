@@ -124,16 +124,16 @@ export const AuthModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 pt-safe pb-safe pl-safe pr-safe bg-slate-950/80 backdrop-blur-md overflow-y-auto">
         <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden my-auto"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          className="w-full max-w-md max-h-[90dvh] overflow-y-auto no-scrollbar bg-slate-900 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-xl relative my-auto will-change-transform"
         >
-          {/* Top ambient glow */}
-          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 bg-gradient-to-tr from-rose-500/20 via-sky-500/20 to-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+          {/* Top ambient glow (desktop only) */}
+          <div className="hidden md:block absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 bg-gradient-to-tr from-rose-500/20 via-sky-500/20 to-amber-500/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Close button */}
           <button

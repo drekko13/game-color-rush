@@ -15,6 +15,7 @@ import {
   LogIn,
   ShoppingBag,
   Trophy,
+  WifiOff,
 } from 'lucide-react';
 import { SettingsModal } from './SettingsModal';
 import { RulesModal } from './RulesModal';
@@ -36,6 +37,7 @@ export const HeaderBar: React.FC = () => {
     openProfileModal,
     openShopModal,
     openLeaderboardModal,
+    isOnline,
   } = useGameStore();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -47,7 +49,7 @@ export const HeaderBar: React.FC = () => {
 
   return (
     <>
-      <header className="w-full flex items-center justify-between px-2 sm:px-4 py-1.5 sm:py-2 z-30 bg-slate-950/40 backdrop-blur-md border-b border-white/5">
+      <header className="w-full flex items-center justify-between px-2 sm:px-4 pt-safe pb-1.5 sm:pb-2 pl-safe pr-safe z-30 bg-slate-950/40 backdrop-blur-md border-b border-white/5">
         {/* Game Logo & Brand */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
           <button
@@ -86,30 +88,30 @@ export const HeaderBar: React.FC = () => {
               }
             }}
             title="Kembali ke Menu Utama"
-            className="hidden md:flex px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/30 transition-all items-center space-x-1.5 text-xs font-bold shadow cursor-pointer"
+            className="hidden md:flex px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/30 transition-all items-center space-x-1.5 text-xs font-bold shadow cursor-pointer shrink-0"
           >
             <Home className="w-4 h-4" />
             <span>Menu</span>
           </button>
 
-          {/* Papan Peringkat (Leaderboard) Button */}
+          {/* Papan Peringkat (Leaderboard) Button: Tablet/Desktop only during matches */}
           <button
             onClick={openLeaderboardModal}
             title="Buka Papan Peringkat (Leaderboard Juara #1-3)"
-            className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
+            className="hidden sm:flex px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
           >
             <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Peringkat</span>
+            <span>Peringkat</span>
           </button>
 
-          {/* Toko Poin (Store) Button */}
+          {/* Toko Poin (Store) Button: Tablet/Desktop only during matches */}
           <button
             onClick={openShopModal}
             title="Buka Toko Poin (Beli Border Profile & Username)"
-            className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
+            className="hidden sm:flex px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 hover:from-amber-500/30 hover:to-rose-500/30 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
           >
             <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Toko</span>
+            <span>Toko</span>
           </button>
 
           {/* Account Profile / Login Button (Visible on Mobile & Desktop) */}
@@ -117,7 +119,7 @@ export const HeaderBar: React.FC = () => {
             <button
               onClick={openProfileModal}
               title="Lihat Profil, Statistik & Riwayat Poin"
-              className="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0"
+              className="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] transition-all flex items-center space-x-1 text-xs font-black cursor-pointer shrink-0 max-w-[120px] sm:max-w-none"
             >
               <PlayerAvatar
                 avatarId={authUser.avatar}
@@ -129,11 +131,11 @@ export const HeaderBar: React.FC = () => {
                 borderId={authUser.activeUsernameBorder || 'default'}
                 className="hidden md:inline text-xs truncate max-w-[80px]"
               />
-              <span className="px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+              <span className="px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-bold shrink-0">
                 {authUser.totalPoints} Pts
               </span>
             </button>
-          ) : (
+          ) : isOnline ? (
             <button
               onClick={() => openAuthModal('login')}
               title="Masuk / Daftar Akun untuk Menyimpan Poin & Riwayat"
@@ -142,7 +144,7 @@ export const HeaderBar: React.FC = () => {
               <LogIn className="w-3.5 h-3.5" />
               <span>Masuk</span>
             </button>
-          )}
+          ) : null}
 
           {/* ESSENTIAL: Info Room / Multiplayer Button (Visible on Mobile & Desktop) */}
           <button
@@ -171,7 +173,7 @@ export const HeaderBar: React.FC = () => {
                 ? 'Party Drink Penalty: ON'
                 : 'Party Drink Penalty: OFF'
             }
-            className={`hidden md:flex p-2 rounded-xl transition-all items-center space-x-1.5 text-xs font-bold cursor-pointer ${
+            className={`hidden md:flex p-2 rounded-xl transition-all items-center space-x-1.5 text-xs font-bold cursor-pointer shrink-0 ${
               partyDrinkPenaltyEnabled
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
                 : 'bg-slate-900 text-slate-500 border border-slate-800'
@@ -185,7 +187,7 @@ export const HeaderBar: React.FC = () => {
           <button
             onClick={toggleSound}
             title={soundMuted ? 'Unmute Audio' : 'Mute Audio'}
-            className="hidden md:flex p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors cursor-pointer"
+            className="hidden md:flex p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors cursor-pointer shrink-0"
           >
             {soundMuted ? (
               <VolumeX className="w-4 h-4 text-rose-400" />
@@ -198,7 +200,7 @@ export const HeaderBar: React.FC = () => {
           <button
             onClick={() => setIsLogsOpen(true)}
             title="Riwayat Log Permainan"
-            className="hidden md:flex p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors cursor-pointer"
+            className="hidden md:flex p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors cursor-pointer shrink-0"
           >
             <ScrollText className="w-4 h-4" />
           </button>
@@ -207,7 +209,7 @@ export const HeaderBar: React.FC = () => {
           <button
             onClick={() => setIsRulesOpen(true)}
             title="Aturan Main & Panduan"
-            className="hidden md:flex p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors cursor-pointer"
+            className="hidden md:flex p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/10 transition-colors cursor-pointer shrink-0"
           >
             <HelpCircle className="w-4 h-4" />
           </button>
@@ -217,7 +219,7 @@ export const HeaderBar: React.FC = () => {
             <button
               onClick={initGame}
               title="Restart Match"
-              className="hidden md:flex p-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-bold transition-all shadow-md cursor-pointer"
+              className="hidden md:flex p-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-bold transition-all shadow-md cursor-pointer shrink-0"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -234,6 +236,14 @@ export const HeaderBar: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {/* In-Game Offline Warning for Multiplayer */}
+      {isInRoom && !isOnline && (
+        <div className="w-full bg-rose-600/90 text-white text-xs font-bold py-1.5 px-3 text-center flex items-center justify-center space-x-2 z-30 shadow">
+          <WifiOff className="w-3.5 h-3.5 animate-pulse" />
+          <span>Koneksi internet terputus! Sedang mencoba menghubungkan kembali...</span>
+        </div>
+      )}
 
       {/* Modals */}
       <SettingsModal

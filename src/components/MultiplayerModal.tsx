@@ -122,17 +122,18 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   return (
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md"
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 pt-safe pb-safe pl-safe pr-safe bg-slate-950/85 backdrop-blur-md"
       >
         <motion.div
           onClick={(e) => e.stopPropagation()}
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="w-full max-w-lg bg-slate-900 border border-white/15 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          className="w-full max-w-lg max-h-[90dvh] overflow-y-auto no-scrollbar bg-slate-900 border border-white/15 rounded-3xl p-4 sm:p-6 shadow-xl relative will-change-transform"
         >
-          {/* Ambient Glow */}
-          <div className="absolute -top-20 -right-20 w-48 h-48 bg-sky-500/20 rounded-full blur-3xl pointer-events-none" />
+          {/* Ambient Glow (desktop only) */}
+          <div className="hidden md:block absolute -top-20 -right-20 w-48 h-48 bg-sky-500/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Close button */}
           <button

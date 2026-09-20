@@ -15,7 +15,7 @@ export const RushQuickTimePrompt: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-x-0 bottom-28 md:bottom-36 z-50 flex justify-center px-4 pointer-events-auto">
+      <div className="fixed inset-x-0 top-1/3 -translate-y-1/2 z-50 flex justify-center px-4 pointer-events-auto">
         {isMeTarget ? (
           /* Human Player must press RUSH to avoid +1 penalty */
           <motion.div

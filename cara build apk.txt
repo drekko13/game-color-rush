@@ -1,0 +1,32 @@
+=== PANDUAN RUN & BUILD ANDROID (COLORRUSH) ===
+
+1. CARA BUILD APK (HASIL AKHIR INSTALLER):
+   Perintah:
+   npm run build:apk
+
+   Lokasi APK Hasil Build:
+   Folder: APK/
+   Nama File: ColorClash-V(version).apk
+
+----------------------------------------------------
+2. CARA PREVIEW DI HP ANDROID (STANDALONE):
+   Perintah:
+   npx cap run android
+   (atau: npm run cap:run)
+
+----------------------------------------------------
+3. CARA PREVIEW DENGAN LIVE RELOAD (HOT RELOAD):
+   -> Setiap kali Anda edit/save kode di laptop, tampilan di HP LANGSUNG BERUBAH otomatis tanpa perlu build atau run ulang!
+
+   Langkah:
+   A. Pastikan dev server Vite berjalan (misal via 'npm run dev' di terminal 1).
+   B. Hubungkan HP via USB, lalu jalankan port forwarding (cukup sekali):
+      adb reverse tcp:5173 tcp:5173
+   C. Jalankan perintah live reload di terminal 2:
+      npx cap run android -l --host localhost --port 5173
+      (atau: npm run cap:live)
+
+   Capacitor akan menampilkan pilihan IP komputer Anda, pilih IP Wi-Fi Anda atau localhost, dan aplikasi di HP akan tersambung langsung ke Vite. Setiap kali Anda tekan Ctrl+S, layar HP Anda langsung ter-update secara real-time!
+
+4. PERBARUI WEB KE ANDROID
+    npm run cap:sync

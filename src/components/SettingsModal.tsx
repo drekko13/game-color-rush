@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
 import { useGameStore } from '../store/useGameStore';
 import {
   X,
@@ -13,6 +14,7 @@ import {
   BookOpen,
   ScrollText,
   Settings,
+  Info,
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -40,6 +42,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     leaveRoom,
     returnToMainMenu,
     initGame,
+    openAboutModal,
+    openExitModal,
   } = useGameStore();
 
   if (!isOpen) return null;
@@ -79,18 +83,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     <AnimatePresence>
       <div
         onClick={onClose}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 pt-safe pb-safe pl-safe pr-safe bg-slate-950/85 backdrop-blur-md"
       >
         <motion.div
           onClick={(e) => e.stopPropagation()}
-          initial={{ scale: 0.92, opacity: 0, y: 10 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.92, opacity: 0, y: 10 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-          className="w-full max-w-md bg-slate-900 border border-white/15 rounded-3xl p-5 md:p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto no-scrollbar"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+          className="w-full max-w-md bg-slate-900 border border-white/15 rounded-3xl p-5 md:p-6 shadow-xl relative max-h-[90vh] overflow-y-auto no-scrollbar will-change-transform"
         >
-          {/* Ambient Glow */}
-          <div className="absolute -top-16 -right-16 w-36 h-36 bg-sky-500/15 rounded-full blur-3xl pointer-events-none" />
+          {/* Ambient Glow (desktop only) */}
+          <div className="hidden md:block absolute -top-16 -right-16 w-36 h-36 bg-sky-500/15 rounded-full blur-3xl pointer-events-none" />
 
           {/* Close button */}
           <button
@@ -251,35 +255,65 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               )}
             </div>
 
-            {/* 5. Quick Links: Aturan & Log Permainan */}
-            {(onOpenRules || onOpenLogs) && (
-              <div className="pt-2 border-t border-white/5 flex items-center justify-center space-x-2">
-                {onOpenRules && (
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onOpenRules();
-                    }}
-                    className="flex-1 py-2 px-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-sky-400 border border-sky-500/20 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    <span>Aturan Main</span>
-                  </button>
-                )}
-                {onOpenLogs && (
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onOpenLogs();
-                    }}
-                    className="flex-1 py-2 px-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-white/10 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
-                  >
-                    <ScrollText className="w-3.5 h-3.5" />
-                    <span>Riwayat Log</span>
-                  </button>
-                )}
-              </div>
-            )}
+            {/* 5. Quick Links: Aturan, Log Permainan, & Tentang Aplikasi */}
+            <div className="pt-2 border-t border-white/5 space-y-2">
+              {(onOpenRules || onOpenLogs) && (
+                <div className="flex items-center justify-center space-x-2">
+                  {onOpenRules && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenRules();
+                      }}
+                      className="flex-1 py-2 px-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-sky-400 border border-sky-500/20 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>Aturan Main</span>
+                    </button>
+                  )}
+                  {onOpenLogs && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenLogs();
+                      }}
+                      className="flex-1 py-2 px-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-slate-300 border border-white/10 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                    >
+                      <ScrollText className="w-3.5 h-3.5" />
+                      <span>Riwayat Log</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* About App / Version Info button (Hanya muncul saat dibuka di aplikasi Android native) */}
+              {Capacitor.isNativePlatform() && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    openAboutModal();
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-amber-300 border border-amber-400/20 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                >
+                  <Info className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Tentang Aplikasi (ColorRush v1.1.0)</span>
+                </button>
+              )}
+
+              {/* Exit App button (Mobile Native only) */}
+              {Capacitor.isNativePlatform() && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    openExitModal();
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Keluar dari Aplikasi</span>
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
       </div>

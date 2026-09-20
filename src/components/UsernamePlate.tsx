@@ -84,13 +84,19 @@ export const UsernamePlate: React.FC<UsernamePlateProps> = ({
     size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base sm:text-lg' : 'text-sm';
 
   if (!activeId || activeId === 'default') {
-    return <span className={`font-black text-white ${sizeClass} ${className}`}>{username}</span>;
+    return (
+      <span className={`font-black text-white ${sizeClass} truncate max-w-full ${className}`}>
+        {username}
+      </span>
+    );
   }
 
   return (
-    <span className={`${style.containerClass} ${sizeClass} ${className}`}>
-      {showBadge && <span className="text-[10px] select-none">{style.badge}</span>}
-      <span className={style.textClass}>{username}</span>
+    <span
+      className={`${style.containerClass} ${sizeClass} max-w-full truncate inline-flex items-center ${className}`}
+    >
+      {showBadge && <span className="text-[10px] select-none shrink-0">{style.badge}</span>}
+      <span className={`${style.textClass} truncate`}>{username}</span>
     </span>
   );
 };
