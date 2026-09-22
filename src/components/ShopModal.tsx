@@ -271,7 +271,7 @@ export const ShopModal: React.FC = () => {
               }`}
             >
               <Shield className="w-4 h-4" />
-              <span>Border Profile ({shopCatalog?.profileBorders.length || 7})</span>
+              <span>Border Profile ({shopCatalog?.profileBorders.length || 8})</span>
             </button>
             <button
               onClick={() => {
@@ -320,7 +320,7 @@ export const ShopModal: React.FC = () => {
                   {/* Left: Item Visual & Info */}
                   <div className="flex items-center space-x-3">
                     {/* Item icon / preview frame */}
-                    <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center shrink-0 relative overflow-hidden">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center shrink-0 relative">
                       {isProfile ? (
                         <PlayerAvatar
                           avatarId={authUser?.avatar || 'crown'}

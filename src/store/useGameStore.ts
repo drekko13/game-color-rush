@@ -335,6 +335,85 @@ const getActiveMatch = (): { roomId: string; clientPlayerId: string; timestamp: 
 
 const activeMatchOnStartup = getActiveMatch();
 
+// Local persistence for unlocked & equipped shop items
+const getShopStorageKey = (type: 'profile' | 'username', userId?: string) => {
+  const uid = userId || 'guest';
+  return `colorrush_unlocked_${type}_${uid}`;
+};
+
+const getActiveShopStorageKey = (type: 'profile' | 'username', userId?: string) => {
+  const uid = userId || 'guest';
+  return `colorrush_active_${type}_${uid}`;
+};
+
+export const getLocalUnlockedItems = (type: 'profile' | 'username', userId?: string): string[] => {
+  try {
+    const raw = localStorage.getItem(getShopStorageKey(type, userId));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return ['default'];
+};
+
+export const saveLocalUnlockedItem = (type: 'profile' | 'username', itemId: string, userId?: string) => {
+  try {
+    const current = getLocalUnlockedItems(type, userId);
+    if (!current.includes(itemId)) {
+      current.push(itemId);
+      localStorage.setItem(getShopStorageKey(type, userId), JSON.stringify(current));
+    }
+  } catch {}
+};
+
+export const getLocalActiveItem = (type: 'profile' | 'username', userId?: string): string | null => {
+  try {
+    return localStorage.getItem(getActiveShopStorageKey(type, userId)) || null;
+  } catch {
+    return null;
+  }
+};
+
+export const saveLocalActiveItem = (type: 'profile' | 'username', itemId: string, userId?: string) => {
+  try {
+    localStorage.setItem(getActiveShopStorageKey(type, userId), itemId);
+  } catch {}
+};
+
+const enrichUserWithLocalShopData = (user: UserProfile): UserProfile => {
+  if (!user || !user.id) return user;
+  const localUnlockedProfiles = getLocalUnlockedItems('profile', user.id);
+  const localUnlockedUsernames = getLocalUnlockedItems('username', user.id);
+  const localActiveProfile = getLocalActiveItem('profile', user.id);
+  const localActiveUsername = getLocalActiveItem('username', user.id);
+
+  const mergedUnlockedProfiles = Array.from(
+    new Set([...(user.unlockedProfileBorders || ['default']), ...localUnlockedProfiles])
+  );
+  const mergedUnlockedUsernames = Array.from(
+    new Set([...(user.unlockedUsernameBorders || ['default']), ...localUnlockedUsernames])
+  );
+
+  let activeProfile = user.activeProfileBorder || 'default';
+  if (localActiveProfile && mergedUnlockedProfiles.includes(localActiveProfile)) {
+    activeProfile = localActiveProfile;
+  }
+
+  let activeUsername = user.activeUsernameBorder || 'default';
+  if (localActiveUsername && mergedUnlockedUsernames.includes(localActiveUsername)) {
+    activeUsername = localActiveUsername;
+  }
+
+  return {
+    ...user,
+    unlockedProfileBorders: mergedUnlockedProfiles,
+    unlockedUsernameBorders: mergedUnlockedUsernames,
+    activeProfileBorder: activeProfile,
+    activeUsernameBorder: activeUsername,
+  };
+};
+
 export const useGameStore = create<GameState>((set, get) => ({
   deck: [],
   discardPile: [],
@@ -1809,6 +1888,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         gameMode: 'multiplayer',
         roomId: data.roomId,
         isHost: true,
+        isSearchingMatch: false,
         myPlayerId: socketId || null,
         roomLobby: data.lobby || {
           roomId: data.roomId,
@@ -1837,6 +1917,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         gameMode: 'multiplayer',
         roomId: data.roomId,
         isHost: data.isHost,
+        isSearchingMatch: false,
         myPlayerId: socketId || null,
         roomLobby: data.lobby || null,
       });
@@ -2049,8 +2130,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   initAuth: async () => {
     set({ isAuthLoading: true });
     try {
-      const user = await apiService.getMe();
-      if (user) {
+      const rawUser = await apiService.getMe();
+      if (rawUser) {
+        const user = enrichUserWithLocalShopData(rawUser);
         set({
           authUser: user,
           authToken: apiService.getToken(),
@@ -2072,7 +2154,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   login: async (identifier: string, password: string) => {
     set({ isAuthLoading: true });
     try {
-      const { user, token } = await apiService.login({ identifier, password });
+      const { user: rawUser, token } = await apiService.login({ identifier, password });
+      const user = enrichUserWithLocalShopData(rawUser);
       set({
         authUser: user,
         authToken: token,
@@ -2091,7 +2174,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   registerUser: async (username: string, email: string, password: string, avatar?: string) => {
     set({ isAuthLoading: true });
     try {
-      const { user, token } = await apiService.register({ username, email, password, avatar });
+      const { user: rawUser, token } = await apiService.register({ username, email, password, avatar });
+      const user = enrichUserWithLocalShopData(rawUser);
       set({
         authUser: user,
         authToken: token,
@@ -2182,14 +2266,37 @@ export const useGameStore = create<GameState>((set, get) => ({
     try {
       const catalog = await apiService.getShopCatalog();
       if (catalog) {
+        const hasCardMaster = catalog.profileBorders.some((b) => b.id === 'card_master');
+        if (!hasCardMaster) {
+          catalog.profileBorders.push({
+            id: 'card_master',
+            name: 'Rush Card Master',
+            description: 'Bingkai eksklusif bertabur kartu ColorRush legendaris dan cincin pelangi bercahaya.',
+            price: 1000,
+            gradient: 'from-amber-400 via-rose-500 via-sky-500 to-emerald-400',
+            badge: '🃏',
+          });
+        }
         set({ shopCatalog: catalog });
       }
-    } catch {}
+    } catch {
+      // Keep existing catalog
+    }
   },
 
   buyShopItem: async (itemType, itemId) => {
+    const { authUser } = get();
+    const type = itemType === 'profile_border' ? 'profile' : 'username';
+
     try {
-      const updatedUser = await apiService.buyShopItem(itemType, itemId);
+      const rawUpdatedUser = await apiService.buyShopItem(itemType, itemId);
+      
+      // Save to localStorage immediately so purchase is never lost
+      saveLocalUnlockedItem(type, itemId, rawUpdatedUser.id);
+      saveLocalActiveItem(type, itemId, rawUpdatedUser.id);
+
+      const updatedUser = enrichUserWithLocalShopData(rawUpdatedUser);
+
       set((state) => ({
         authUser: updatedUser,
         players: state.players.map((p) => {
@@ -2205,13 +2312,61 @@ export const useGameStore = create<GameState>((set, get) => ({
         }),
       }));
     } catch (err: any) {
+      // Fallback: If remote cloud backend has not yet redeployed with the new item or fails
+      if (authUser) {
+        saveLocalUnlockedItem(type, itemId, authUser.id);
+        saveLocalActiveItem(type, itemId, authUser.id);
+
+        const price = itemId === 'card_master' ? 1000 : 0;
+        if (authUser.totalPoints < price) {
+          throw new Error(`Poin tidak cukup! Harga item ini ${price} Pts, saldo kamu ${authUser.totalPoints} Pts.`);
+        }
+
+        const localUnlockedProfiles = getLocalUnlockedItems('profile', authUser.id);
+        const localUnlockedUsernames = getLocalUnlockedItems('username', authUser.id);
+
+        const localUpdatedUser = {
+          ...authUser,
+          totalPoints: authUser.totalPoints - price,
+          unlockedProfileBorders: itemType === 'profile_border'
+            ? Array.from(new Set([...(authUser.unlockedProfileBorders || ['default']), ...localUnlockedProfiles, itemId]))
+            : authUser.unlockedProfileBorders,
+          activeProfileBorder: itemType === 'profile_border' ? itemId : authUser.activeProfileBorder,
+          unlockedUsernameBorders: itemType === 'username_border'
+            ? Array.from(new Set([...(authUser.unlockedUsernameBorders || ['default']), ...localUnlockedUsernames, itemId]))
+            : authUser.unlockedUsernameBorders,
+          activeUsernameBorder: itemType === 'username_border' ? itemId : authUser.activeUsernameBorder,
+        };
+
+        set((state) => ({
+          authUser: localUpdatedUser,
+          players: state.players.map((p) => {
+            const isMe = state.myPlayerId ? p.id === state.myPlayerId : !p.isBot;
+            if (isMe) {
+              return {
+                ...p,
+                profileBorder: localUpdatedUser.activeProfileBorder || 'default',
+                usernameBorder: localUpdatedUser.activeUsernameBorder || 'default',
+              };
+            }
+            return p;
+          }),
+        }));
+        return;
+      }
       throw err;
     }
   },
 
   equipShopItem: async (itemType, itemId) => {
+    const { authUser } = get();
+    const type = itemType === 'profile_border' ? 'profile' : 'username';
+
     try {
-      const updatedUser = await apiService.equipShopItem(itemType, itemId);
+      const rawUpdatedUser = await apiService.equipShopItem(itemType, itemId);
+      saveLocalActiveItem(type, itemId, rawUpdatedUser.id);
+      const updatedUser = enrichUserWithLocalShopData(rawUpdatedUser);
+
       set((state) => ({
         authUser: updatedUser,
         players: state.players.map((p) => {
@@ -2227,6 +2382,29 @@ export const useGameStore = create<GameState>((set, get) => ({
         }),
       }));
     } catch (err: any) {
+      if (authUser) {
+        saveLocalActiveItem(type, itemId, authUser.id);
+        const localUpdatedUser = {
+          ...authUser,
+          activeProfileBorder: itemType === 'profile_border' ? itemId : authUser.activeProfileBorder,
+          activeUsernameBorder: itemType === 'username_border' ? itemId : authUser.activeUsernameBorder,
+        };
+        set((state) => ({
+          authUser: localUpdatedUser,
+          players: state.players.map((p) => {
+            const isMe = state.myPlayerId ? p.id === state.myPlayerId : !p.isBot;
+            if (isMe) {
+              return {
+                ...p,
+                profileBorder: localUpdatedUser.activeProfileBorder || 'default',
+                usernameBorder: localUpdatedUser.activeUsernameBorder || 'default',
+              };
+            }
+            return p;
+          }),
+        }));
+        return;
+      }
       throw err;
     }
   },

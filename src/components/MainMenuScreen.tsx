@@ -27,6 +27,7 @@ import {
   Trophy,
   WifiOff,
   Info,
+  X,
 } from 'lucide-react';
 
 export const MainMenuScreen: React.FC = () => {
@@ -44,6 +45,7 @@ export const MainMenuScreen: React.FC = () => {
     togglePartyDrinkPenalty,
     onlineCount,
     isSearchingMatch,
+    cancelMatchmaking,
     authUser,
     openAuthModal,
     openProfileModal,
@@ -60,6 +62,31 @@ export const MainMenuScreen: React.FC = () => {
   const [roomIsPublic, setRoomIsPublic] = useState(true);
   const [roomMaxSlots, setRoomMaxSlots] = useState<2 | 3 | 4>(4);
   const [showMobileModes, setShowMobileModes] = useState(false);
+  const [searchTimeoutNotice, setSearchTimeoutNotice] = useState(false);
+
+  // Auto-timeout for matchmaking after 12 seconds if room is not found
+  useEffect(() => {
+    if (!isSearchingMatch) return;
+    setSearchTimeoutNotice(false);
+
+    const timeout = setTimeout(() => {
+      if (useGameStore.getState().isSearchingMatch) {
+        cancelMatchmaking();
+        setSearchTimeoutNotice(true);
+      }
+    }, 12000);
+
+    return () => clearTimeout(timeout);
+  }, [isSearchingMatch, cancelMatchmaking]);
+
+  // Clean up search on unmount
+  useEffect(() => {
+    return () => {
+      if (useGameStore.getState().isSearchingMatch) {
+        cancelMatchmaking();
+      }
+    };
+  }, [cancelMatchmaking]);
 
   // Poll public rooms when public tab is active
   useEffect(() => {
@@ -70,14 +97,28 @@ export const MainMenuScreen: React.FC = () => {
     return () => clearInterval(timer);
   }, [fetchPublicRooms]);
 
+  const handleTabChange = (tab: 'quick' | 'create' | 'join' | 'public') => {
+    if (isSearchingMatch && tab !== 'quick') {
+      cancelMatchmaking();
+    }
+    setMultiplayerTab(tab);
+  };
+
   const handleStartSolo = () => {
     soundFx.playCardDraw();
     startSoloGame();
   };
 
   const handleRandomMatch = () => {
+    setSearchTimeoutNotice(false);
     soundFx.playCardDraw();
     joinRandomMatch();
+  };
+
+  const handleCancelMatch = () => {
+    soundFx.playCardDraw();
+    cancelMatchmaking();
+    setSearchTimeoutNotice(false);
   };
 
   const handleCreateRoom = () => {
@@ -603,7 +644,7 @@ export const MainMenuScreen: React.FC = () => {
             {/* Multiplayer Sub-Tabs: 2x2 grid on mobile for optimal tap targets & clean non-wrapping labels, 4 cols on desktop */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-slate-950/80 border border-white/10 text-xs font-bold">
               <button
-                onClick={() => setMultiplayerTab('quick')}
+                onClick={() => handleTabChange('quick')}
                 className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
                   multiplayerTab === 'quick'
                     ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
@@ -614,7 +655,7 @@ export const MainMenuScreen: React.FC = () => {
                 <span>Quick Match</span>
               </button>
               <button
-                onClick={() => setMultiplayerTab('create')}
+                onClick={() => handleTabChange('create')}
                 className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
                   multiplayerTab === 'create'
                     ? 'bg-purple-600 text-white shadow-md'
@@ -625,7 +666,7 @@ export const MainMenuScreen: React.FC = () => {
                 <span>Buat Room</span>
               </button>
               <button
-                onClick={() => setMultiplayerTab('join')}
+                onClick={() => handleTabChange('join')}
                 className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 ${
                   multiplayerTab === 'join'
                     ? 'bg-indigo-600 text-white shadow-md'
@@ -636,7 +677,7 @@ export const MainMenuScreen: React.FC = () => {
                 <span>Gabung Kode</span>
               </button>
               <button
-                onClick={() => setMultiplayerTab('public')}
+                onClick={() => handleTabChange('public')}
                 className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 relative ${
                   multiplayerTab === 'public'
                     ? 'bg-rose-600 text-white shadow-md'
@@ -661,17 +702,65 @@ export const MainMenuScreen: React.FC = () => {
                   </p>
                 </div>
 
-                <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  disabled={isSearchingMatch}
-                  onClick={handleRandomMatch}
-                  className="w-full py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(2,132,199,0.4)] flex items-center justify-center space-x-2 disabled:opacity-60 cursor-pointer"
-                >
-                  <Radio className={`w-4 h-4 ${isSearchingMatch ? 'animate-spin' : 'animate-pulse'}`} />
-                  <span>{isSearchingMatch ? 'Sedang Mencari Room...' : 'Cari Match Sekarang'}</span>
-                </motion.button>
+                {isSearchingMatch ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 py-3 px-3.5 rounded-xl sm:rounded-2xl bg-sky-950/60 border border-sky-500/40 text-sky-300 font-black text-xs sm:text-sm flex items-center justify-center space-x-2 shadow-[0_0_20px_rgba(2,132,199,0.25)]">
+                        <Radio className="w-4 h-4 animate-spin text-sky-400 shrink-0" />
+                        <span className="truncate">Sedang Mencari Room...</span>
+                      </div>
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={handleCancelMatch}
+                        className="py-3 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(225,29,72,0.4)] flex items-center justify-center space-x-1.5 cursor-pointer shrink-0 border border-rose-400/40 transition-all"
+                        title="Batalkan pencarian room"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Batal</span>
+                      </motion.button>
+                    </div>
+                    <p className="text-[11px] text-center text-slate-400 flex items-center justify-center space-x-1.5 animate-pulse">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
+                      <span>Menghubungi server & mencari room aktif...</span>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleRandomMatch}
+                      className="w-full py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:brightness-110 text-white font-black text-xs sm:text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(2,132,199,0.4)] flex items-center justify-center space-x-2 cursor-pointer transition-all"
+                    >
+                      <Radio className="w-4 h-4 animate-pulse" />
+                      <span>Cari Match Sekarang</span>
+                    </motion.button>
+
+                    {searchTimeoutNotice && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between space-x-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Info className="w-4 h-4 shrink-0 text-amber-400" />
+                          <span className="text-[11px] leading-tight">
+                            Belum menemukan room aktif. Coba cari lagi atau buat room baru!
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleTabChange('create')}
+                          className="px-2 py-1 rounded-lg bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 text-[10px] font-bold shrink-0 cursor-pointer"
+                        >
+                          Buat Room
+                        </button>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -822,7 +911,7 @@ export const MainMenuScreen: React.FC = () => {
                       Belum ada room publik aktif yang sedang menunggu pemain.
                     </p>
                     <button
-                      onClick={() => setMultiplayerTab('create')}
+                      onClick={() => handleTabChange('create')}
                       className="px-3 py-1.5 rounded-xl bg-purple-600/30 border border-purple-400/40 text-purple-300 text-xs font-bold"
                     >
                       Buat Room Publik Pertama!

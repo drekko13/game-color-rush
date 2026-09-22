@@ -58,7 +58,10 @@ const EMOJI_MAP: Record<string, AvatarId> = {
   '🌸': 'sparkles',
 };
 
-export const PROFILE_BORDER_STYLES: Record<string, { ringClass: string; glowClass: string; label: string; badge: string }> = {
+export const PROFILE_BORDER_STYLES: Record<
+  string,
+  { ringClass: string; glowClass: string; label: string; badge: string; overlayImage?: string }
+> = {
   default: {
     ringClass: 'ring-2 ring-white/20',
     glowClass: '',
@@ -101,6 +104,13 @@ export const PROFILE_BORDER_STYLES: Record<string, { ringClass: string; glowClas
     label: 'Chroma RGB Wave',
     badge: '🌈',
   },
+  card_master: {
+    ringClass: 'ring-2 ring-amber-400',
+    glowClass: 'shadow-[0_0_22px_rgba(245,158,11,0.95)]',
+    label: 'Rush Card Master',
+    badge: '🃏',
+    overlayImage: '/borders/card_master.png',
+  },
 };
 
 interface PlayerAvatarProps {
@@ -142,6 +152,27 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
     lg: 'w-6 h-6',
     xl: 'w-7 h-7',
   }[size];
+
+  // Custom visual frame overlay (e.g. Card Master circular border)
+  if (border && borderStyle.overlayImage) {
+    return (
+      <div className={`relative flex items-center justify-center shrink-0 ${sizeClasses} ${className}`}>
+        {/* Inner Avatar circle fitting seamlessly inside the frame */}
+        <div
+          className={`w-full h-full rounded-full bg-gradient-to-tr ${option.gradient} flex items-center justify-center text-white shadow-inner transition-all ring-1 ring-amber-300/40 relative z-0`}
+        >
+          <IconComponent className={iconSizes} />
+        </div>
+        {/* Card Frame Image Overlay */}
+        <img
+          src={borderStyle.overlayImage}
+          alt={borderStyle.label}
+          style={{ width: '220%', height: '220%', top: '-60%', left: '-60%' }}
+          className="absolute max-w-none pointer-events-none select-none z-10 object-contain drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+        />
+      </div>
+    );
+  }
 
   const ringStyle = border
     ? borderId && borderId !== 'default'

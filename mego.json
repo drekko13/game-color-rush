@@ -1,0 +1,21 @@
+{
+  "$schema": "https://mego.io/schemas/v1/manifest.json",
+  "slug": "color-rush",
+  "title": "Color Rush",
+  "tagline": "Card Games",
+  "category": "card",
+  "version": "1.0.3",
+  "studio": "Andrep13",
+  "entry": "index.html",
+  "externalUrl": "https://game-color-rush.vercel.app/",
+  "cover": "/assets/color-rush-poster.jpg",
+  "banner": "/assets/color-rush-banner.jpg",
+  "poster": "/assets/color-rush-poster.jpg",
+  "orientation": "Responsif (Potret / Lanskap)",
+  "howTo": "Gunakan tombol kontrol di layar atau keyboard untuk bermain.",
+  "verified": true,
+  "hot": true,
+  "fresh": true,
+  "featured": false,
+  "featuredWeek": false
+}

@@ -125,6 +125,14 @@ export const SHOP_CATALOG = {
       gradient: 'from-rose-500 via-amber-400 via-emerald-400 via-sky-400 to-purple-500',
       badge: '🌈',
     },
+    {
+      id: 'card_master',
+      name: 'Rush Card Master',
+      description: 'Bingkai eksklusif bertabur kartu ColorRush legendaris dan cincin pelangi bercahaya.',
+      price: 1000,
+      gradient: 'from-amber-400 via-rose-500 via-sky-500 to-emerald-400',
+      badge: '🃏',
+    },
   ],
   usernameBorders: [
     {
